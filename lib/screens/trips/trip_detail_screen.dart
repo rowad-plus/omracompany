@@ -4,6 +4,7 @@ import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
+import '../wizard/trip_wizard_screen.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final ApiTrip trip;
@@ -69,7 +70,22 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     final t = context.watch<AppState>().t;
     final isStopped = trip.status != 'active';
     return Scaffold(
-      appBar: AppBar(title: Text(trip.title)),
+      appBar: AppBar(
+        title: Text(trip.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => TripWizardScreen(editingTripId: trip.id)),
+              );
+              if (!mounted) return;
+              final matches = context.read<AppState>().apiTrips.where((t) => t.id == trip.id);
+              if (matches.isNotEmpty) setState(() => trip = matches.first);
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [

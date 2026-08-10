@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../company/bank_info_screen.dart';
+import '../company/branches_screen.dart';
 import '../company/company_screen.dart';
+import 'change_password_screen.dart';
+import 'sessions_screen.dart';
 import '../hotels/hotels_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../reports/reports_screen.dart';
@@ -58,7 +62,11 @@ class ProfileScreen extends StatelessWidget {
               () => push(const ReportsScreen())),
         if (canManageUsers) _menuItem(context, Icons.manage_accounts_outlined, t('profile_users'), () => push(const UsersScreen())),
         if (ownerOnly) _menuItem(context, Icons.business_outlined, t('profile_company'), () => push(const CompanyScreen())),
+        if (ownerOnly) _menuItem(context, Icons.account_balance_outlined, t('profile_bank_info'), () => push(const BankInfoScreen())),
+        if (ownerOnly) _menuItem(context, Icons.store_outlined, t('profile_branches'), () => push(const BranchesScreen())),
         _menuItem(context, Icons.notifications_outlined, t('profile_notifications'), () => push(const NotificationsScreen())),
+        _menuItem(context, Icons.lock_outline, t('profile_change_password'), () => push(const ChangePasswordScreen())),
+        _menuItem(context, Icons.devices_outlined, t('profile_sessions'), () => push(const SessionsScreen())),
         _menuItem(context, Icons.language_outlined, t('profile_language'), () => _showLanguageSheet(context, state)),
         _menuItem(context, Icons.logout, t('profile_logout'), onLogout, danger: true),
       ],

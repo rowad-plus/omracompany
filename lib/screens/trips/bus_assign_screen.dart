@@ -56,7 +56,8 @@ class _BusAssignScreenState extends State<BusAssignScreen> {
                   child: CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     value: selectedBusIds.contains(bus.id),
-                    title: Text('${bus.number} — ${bus.company}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13.5)),
+                    title: Text(bus.company.isEmpty ? bus.number : '${bus.number} — ${bus.company}',
+                        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13.5)),
                     subtitle: Text('${bus.capacity} ${t('unit_passenger')}', style: const TextStyle(fontSize: 11.5)),
                     onChanged: (v) => setState(() {
                       if (v == true) {

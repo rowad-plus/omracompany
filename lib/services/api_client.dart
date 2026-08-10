@@ -80,4 +80,47 @@ class ApiClient {
     final res = await http.delete(_uri(path), headers: _headers);
     return _decode(res);
   }
+
+  /// بيسطّح أي Map/List متداخل لصيغة الأقواس اللي Laravel بيفهمها في
+  /// multipart/form-data، مثلًا: family_prices[0][price], programs[0][steps][1].
+  void _flatten(String key, dynamic value, Map<String, String> out) {
+    if (value == null) return;
+    if (value is Map) {
+      value.forEach((k, v) => _flatten('$key[$k]', v, out));
+    } else if (value is List) {
+      for (var i = 0; i < value.length; i++) {
+        _flatten('$key[$i]', value[i], out);
+      }
+    } else if (value is bool) {
+      out[key] = value ? '1' : '0';
+    } else {
+      out[key] = value.toString();
+    }
+  }
+
+  /// طلب multipart لإنشاء/تعديل برنامج فيه صور — Laravel بيستخدم _method
+  /// لمحاكاة PUT جوه POST عادي، لأن رفع الملفات مع PUT مباشر مش مضمون.
+  Future<dynamic> postMultipart(
+    String path,
+    Map<String, dynamic> fields, {
+    List<MapEntry<String, List<int>>> files = const [],
+    String? method,
+  }) async {
+    final request = http.MultipartRequest('POST', _uri(path));
+    request.headers['Accept'] = 'application/json';
+    if (_token != null) request.headers['Authorization'] = 'Bearer $_token';
+    if (method != null) request.fields['_method'] = method;
+
+    final flat = <String, String>{};
+    fields.forEach((k, v) => _flatten(k, v, flat));
+    request.fields.addAll(flat);
+
+    for (var i = 0; i < files.length; i++) {
+      request.files.add(http.MultipartFile.fromBytes(files[i].key, files[i].value, filename: 'image_$i.jpg'));
+    }
+
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    return _decode(res);
+  }
 }

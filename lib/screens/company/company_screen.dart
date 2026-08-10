@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
@@ -16,7 +17,22 @@ class _CompanyScreenState extends State<CompanyScreen> {
   final emailCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
   bool saving = false;
+  bool uploadingLogo = false;
   bool _initialized = false;
+  final _picker = ImagePicker();
+
+  Future<void> _pickLogo() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked == null) return;
+    setState(() => uploadingLogo = true);
+    final bytes = await picked.readAsBytes();
+    final result = await context.read<AppState>().uploadCompanyLogo(bytes);
+    if (!mounted) return;
+    setState(() => uploadingLogo = false);
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+    }
+  }
 
   @override
   void dispose() {
@@ -74,6 +90,45 @@ class _CompanyScreenState extends State<CompanyScreen> {
               children: [
                 Text(t('company_subtitle'), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 16),
+                Center(
+                  child: InkWell(
+                    onTap: uploadingLogo ? null : _pickLogo,
+                    borderRadius: BorderRadius.circular(50),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.surface2,
+                            border: Border.all(color: AppColors.border),
+                            image: state.companyInfo?.logo != null
+                                ? DecorationImage(image: NetworkImage(state.companyInfo!.logo!), fit: BoxFit.cover)
+                                : null,
+                          ),
+                          child: state.companyInfo?.logo == null
+                              ? const Icon(Icons.apartment_outlined, size: 32, color: AppColors.textMuted)
+                              : null,
+                        ),
+                        if (uploadingLogo)
+                          const CircularProgressIndicator(strokeWidth: 2)
+                        else
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                              child: const Icon(Icons.camera_alt_outlined, size: 14, color: Colors.white),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
                 TextField(controller: nameCtrl, decoration: InputDecoration(labelText: t('field_company_name'))),
                 const SizedBox(height: 14),
                 TextField(controller: licenseCtrl, decoration: InputDecoration(labelText: t('field_license_number'))),

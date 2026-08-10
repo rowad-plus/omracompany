@@ -29,7 +29,7 @@ class _HotelsScreenState extends State<HotelsScreen> {
         foregroundColor: AppColors.text,
         actions: [
           IconButton(
-            onPressed: state.saudiCities.isEmpty ? null : () => _showAddHotelSheet(context),
+            onPressed: state.saudiCities.isEmpty ? null : () => _showHotelSheet(context),
             icon: const Icon(Icons.add),
           ),
         ],
@@ -126,9 +126,18 @@ class _HotelCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(hotel.contact.isEmpty ? '—' : hotel.contact, style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
-                    GestureDetector(
-                      onTap: () => _confirmDelete(context, hotel),
-                      child: Text(t('action_delete'), style: const TextStyle(fontSize: 10.5, color: AppColors.danger)),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => _showHotelSheet(context, hotel: hotel),
+                          child: Text(t('action_edit'), style: const TextStyle(fontSize: 10.5, color: AppColors.primary)),
+                        ),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () => _confirmDelete(context, hotel),
+                          child: Text(t('action_delete'), style: const TextStyle(fontSize: 10.5, color: AppColors.danger)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -167,18 +176,19 @@ void _confirmDelete(BuildContext context, CompanyHotel hotel) {
   );
 }
 
-void _showAddHotelSheet(BuildContext context) {
+void _showHotelSheet(BuildContext context, {CompanyHotel? hotel}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.surface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    builder: (ctx) => const _AddHotelSheet(),
+    builder: (ctx) => _AddHotelSheet(hotel: hotel),
   );
 }
 
 class _AddHotelSheet extends StatefulWidget {
-  const _AddHotelSheet();
+  final CompanyHotel? hotel;
+  const _AddHotelSheet({this.hotel});
 
   @override
   State<_AddHotelSheet> createState() => _AddHotelSheetState();
@@ -193,11 +203,22 @@ class _AddHotelSheetState extends State<_AddHotelSheet> {
   bool saving = false;
   String? error;
 
+  bool get isEdit => widget.hotel != null;
+
   @override
   void initState() {
     super.initState();
-    final cities = context.read<AppState>().saudiCities;
-    if (cities.isNotEmpty) cityId = cities.first.id;
+    final hotel = widget.hotel;
+    if (hotel != null) {
+      nameCtrl.text = hotel.name;
+      distanceCtrl.text = hotel.distanceHaram;
+      contactCtrl.text = hotel.contact;
+      cityId = hotel.cityId;
+      stars = hotel.stars;
+    } else {
+      final cities = context.read<AppState>().saudiCities;
+      if (cities.isNotEmpty) cityId = cities.first.id;
+    }
   }
 
   @override
@@ -217,13 +238,23 @@ class _AddHotelSheetState extends State<_AddHotelSheet> {
       saving = true;
       error = null;
     });
-    final result = await context.read<AppState>().createCompanyHotel(
-          name: nameCtrl.text.trim(),
-          cityId: cityId!,
-          stars: stars,
-          distanceHaram: distanceCtrl.text.trim(),
-          contact: contactCtrl.text.trim().isEmpty ? null : contactCtrl.text.trim(),
-        );
+    final state = context.read<AppState>();
+    final result = isEdit
+        ? await state.updateCompanyHotel(
+            id: widget.hotel!.id,
+            name: nameCtrl.text.trim(),
+            cityId: cityId!,
+            stars: stars,
+            distanceHaram: distanceCtrl.text.trim(),
+            contact: contactCtrl.text.trim().isEmpty ? null : contactCtrl.text.trim(),
+          )
+        : await state.createCompanyHotel(
+            name: nameCtrl.text.trim(),
+            cityId: cityId!,
+            stars: stars,
+            distanceHaram: distanceCtrl.text.trim(),
+            contact: contactCtrl.text.trim().isEmpty ? null : contactCtrl.text.trim(),
+          );
     if (!mounted) return;
     setState(() => saving = false);
     if (result == null) {
@@ -253,7 +284,7 @@ class _AddHotelSheetState extends State<_AddHotelSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(t('add_hotel_title'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text(isEdit ? t('action_edit') : t('add_hotel_title'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                     IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close, size: 18)),
                   ],
                 ),

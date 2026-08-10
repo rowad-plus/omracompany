@@ -96,166 +96,42 @@ extension UserRoleX on UserRole {
   }
 }
 
-enum TripTier { economy, premium, vip }
-
-extension TripTierX on TripTier {
-  String get label {
-    switch (this) {
-      case TripTier.economy:
-        return 'اقتصادي';
-      case TripTier.premium:
-        return 'مميز';
-      case TripTier.vip:
-        return 'VIP';
-    }
-  }
-}
-
-enum TripStatus { active, draft }
-
-class Trip {
-  final String id;
-  final String name;
-  final String destination;
-  final int days;
-  final int stars;
-  final TripTier tier;
-  final TripStatus status;
-  final double price;
-  final int seatsFilled;
-  final int seatsTotal;
-  final String? hotelMecca;
-  final String? hotelMedina;
-
-  const Trip({
-    required this.id,
-    required this.name,
-    required this.destination,
-    required this.days,
-    required this.stars,
-    required this.tier,
-    required this.status,
-    required this.price,
-    required this.seatsFilled,
-    required this.seatsTotal,
-    this.hotelMecca,
-    this.hotelMedina,
-  });
-}
-
-class BusInfo {
-  final String id;
-  final String name;
-  final int capacity;
-  bool assignedToTrip;
-  final String? arrivalTime;
-
-  BusInfo({
-    required this.id,
-    required this.name,
-    required this.capacity,
-    this.assignedToTrip = false,
-    this.arrivalTime,
-  });
-}
-
-class Traveler {
-  final String id;
-  final String name;
-  final String passportOrId;
-  final String phone;
-  final double? amountPaid;
-  final int tripsCount;
-  final String category;
-
-  const Traveler({
-    required this.id,
-    required this.name,
-    required this.passportOrId,
-    required this.phone,
-    this.amountPaid,
-    this.tripsCount = 1,
-    this.category = 'عمرة',
-  });
-}
-
-/// فندق متعاقد معه — يُعرض في "الفنادق والإقامة" ويُستخدم عند تعيين الفندق لبرنامج.
-class Hotel {
-  final String name;
-  final String city;
-  final int stars;
-  final String distance;
-  final String phone;
-
-  const Hotel({
-    required this.name,
-    required this.city,
-    required this.stars,
-    required this.distance,
-    this.phone = '+966 5X XXX XXXX',
-  });
-}
-
-enum TransportType { bus, flight }
-
-extension TransportTypeX on TransportType {
-  String get label => this == TransportType.bus ? 'باص' : 'طيران';
-}
-
-/// وسيلة نقل (باص أو شركة طيران شريكة) — تُعرض في "النقل والطيران".
-class TransportItem {
-  final TransportType type;
-  final String name;
-  final String? driver;
-  final int? capacity;
-
-  const TransportItem({
-    required this.type,
-    required this.name,
-    this.driver,
-    this.capacity,
-  });
-}
-
-/// عضو فريق عمل (مستخدم/مشرف) بأدوار متعددة محتملة.
-class TeamUser {
-  final String name;
-  final String contact;
-  final Set<UserRole> roles;
-
-  const TeamUser({
-    required this.name,
-    required this.contact,
-    required this.roles,
-  });
-}
-
 enum NotificationKind { info, warning, danger, success }
 
 class AppNotification {
+  final int id;
+  final String type;
   final String title;
+  final String? body;
   final String timeAgo;
+  final bool isRead;
   final NotificationKind kind;
 
   const AppNotification({
+    required this.id,
+    required this.type,
     required this.title,
+    this.body,
     required this.timeAgo,
+    required this.isRead,
     required this.kind,
   });
-}
 
-class RoomAssignment {
-  final String floor;
-  final String roomNumber;
-  final List<String> occupantNames;
+  static NotificationKind _kindForType(String type) {
+    if (type.contains('cancelled')) return NotificationKind.danger;
+    if (type.contains('confirmed')) return NotificationKind.success;
+    return NotificationKind.info;
+  }
 
-  const RoomAssignment({
-    required this.floor,
-    required this.roomNumber,
-    required this.occupantNames,
-  });
-
-  int get capacity => occupantNames.length;
+  factory AppNotification.fromJson(Map<String, dynamic> json) => AppNotification(
+        id: json['id'] as int,
+        type: json['type'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        body: json['body'] as String?,
+        timeAgo: json['time_ago'] as String? ?? '',
+        isRead: json['is_read'] as bool? ?? false,
+        kind: _kindForType(json['type'] as String? ?? ''),
+      );
 }
 
 /// مدينة سعودية (Backend) — تُستخدم في اختيار مدينة الفندق أو مدينة الانطلاق.
@@ -305,7 +181,7 @@ class CompanyHotel {
 /// باص تابع لشركة أتوبيسات متعاقد معها (Backend حقيقي).
 class CompanyBus {
   final int id;
-  final int busCompanyId;
+  final int? busCompanyId;
   final String busNumber;
   final int? capacity;
   final String driverName;
@@ -314,7 +190,7 @@ class CompanyBus {
 
   const CompanyBus({
     required this.id,
-    required this.busCompanyId,
+    this.busCompanyId,
     required this.busNumber,
     this.capacity,
     this.driverName = '',
@@ -324,7 +200,7 @@ class CompanyBus {
 
   factory CompanyBus.fromJson(Map<String, dynamic> j) => CompanyBus(
         id: j['id'] as int,
-        busCompanyId: j['bus_company_id'] as int,
+        busCompanyId: j['bus_company_id'] as int?,
         busNumber: j['bus_number'] as String? ?? '',
         capacity: j['capacity'] as int?,
         driverName: j['driver_name'] as String? ?? '',
@@ -441,9 +317,7 @@ class CompanyInfo {
       );
 }
 
-enum AttendanceStatus { none, present, absent }
-
-/// موظف فعلي في الشركة (Backend) — مختلف عن TeamUser التجريبي القديم.
+/// موظف فعلي في الشركة (Backend).
 class Employee {
   final int id;
   final String name;
@@ -524,6 +398,9 @@ class ApiTrip {
   final String? nextDate;
   final List<Map<String, dynamic>> buses;
   final List<Map<String, dynamic>> supervisors;
+  final String? departureLocation;
+  final double? departureLatitude;
+  final double? departureLongitude;
 
   const ApiTrip({
     required this.id,
@@ -546,7 +423,16 @@ class ApiTrip {
     this.nextDate,
     this.buses = const [],
     this.supervisors = const [],
+    this.departureLocation,
+    this.departureLatitude,
+    this.departureLongitude,
   });
+
+  static double? _toDoubleOrNull(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
 
   factory ApiTrip.fromJson(Map<String, dynamic> j) => ApiTrip(
         id: j['id'] as int,
@@ -569,6 +455,9 @@ class ApiTrip {
         nextDate: j['next_date'] as String?,
         buses: (j['buses'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
         supervisors: (j['supervisors'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
+        departureLocation: j['departure_location'] as String?,
+        departureLatitude: _toDoubleOrNull(j['departure_latitude']),
+        departureLongitude: _toDoubleOrNull(j['departure_longitude']),
       );
 }
 
@@ -635,5 +524,67 @@ class PermissionGroup {
         key: key,
         label: json['label'] as String? ?? key,
         permissions: (json['permissions'] as Map<String, dynamic>? ?? {}).map((k, v) => MapEntry(k, v as String)),
+      );
+}
+
+/// بيانات الحساب البنكي للشركة (Backend حقيقي) — للمالك بس.
+class BankInfo {
+  final String? bankName;
+  final String? bankAccountHolder;
+  final String? bankAccountNumber;
+  final String? bankIban;
+
+  const BankInfo({this.bankName, this.bankAccountHolder, this.bankAccountNumber, this.bankIban});
+
+  factory BankInfo.fromJson(Map<String, dynamic> j) => BankInfo(
+        bankName: j['bank_name'] as String?,
+        bankAccountHolder: j['bank_account_holder'] as String?,
+        bankAccountNumber: j['bank_account_number'] as String?,
+        bankIban: j['bank_iban'] as String?,
+      );
+}
+
+/// فرع للشركة (Backend حقيقي).
+class CompanyBranchInfo {
+  final int id;
+  final String name;
+  final String? city;
+  final String? phone;
+  final String? manager;
+
+  const CompanyBranchInfo({required this.id, required this.name, this.city, this.phone, this.manager});
+
+  factory CompanyBranchInfo.fromJson(Map<String, dynamic> j) => CompanyBranchInfo(
+        id: j['id'] as int,
+        name: j['name'] as String? ?? '',
+        city: j['city'] as String?,
+        phone: j['phone'] as String?,
+        manager: j['manager'] as String?,
+      );
+}
+
+/// جلسة/توكن دخول نشط (Backend حقيقي) — كل واحدة تمثل جهاز/تطبيق مسجّل
+/// دخول بتوكن Sanctum منفصل.
+class AccountSession {
+  final int id;
+  final String name;
+  final DateTime createdAt;
+  final DateTime? lastUsedAt;
+  final bool isCurrent;
+
+  const AccountSession({
+    required this.id,
+    required this.name,
+    required this.createdAt,
+    this.lastUsedAt,
+    this.isCurrent = false,
+  });
+
+  factory AccountSession.fromJson(Map<String, dynamic> j) => AccountSession(
+        id: j['id'] as int,
+        name: j['name'] as String? ?? '',
+        createdAt: DateTime.parse(j['created_at'] as String),
+        lastUsedAt: j['last_used_at'] != null ? DateTime.parse(j['last_used_at'] as String) : null,
+        isCurrent: j['is_current'] as bool? ?? false,
       );
 }

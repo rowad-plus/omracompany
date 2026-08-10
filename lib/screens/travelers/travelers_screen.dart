@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
@@ -66,12 +67,16 @@ class _TravelersScreenState extends State<TravelersScreen> {
                         children: [
                           for (var i = 0; i < filtered.length; i++) ...[
                             if (i > 0) const Divider(height: 25),
-                            InfoRow(
-                              leading: InitialsAvatar(initials: filtered[i].name.isNotEmpty ? filtered[i].name.substring(0, 1) : '؟'),
-                              title: filtered[i].name,
-                              subtitle:
-                                  '${filtered[i].bookingsCount} ${t('travelers_trips_suffix')} · ${filtered[i].totalSpent.toStringAsFixed(0)} ${t('currency_sar')}',
-                              trailing: filtered[i].tripTypes.isNotEmpty ? StatusPill.info(filtered[i].tripTypes.first) : null,
+                            InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => showAddTravelerSheet(context, customer: filtered[i]),
+                              child: InfoRow(
+                                leading: InitialsAvatar(initials: filtered[i].name.isNotEmpty ? filtered[i].name.substring(0, 1) : '؟'),
+                                title: filtered[i].name,
+                                subtitle:
+                                    '${filtered[i].bookingsCount} ${t('travelers_trips_suffix')} · ${filtered[i].totalSpent.toStringAsFixed(0)} ${t('currency_sar')}',
+                                trailing: filtered[i].tripTypes.isNotEmpty ? StatusPill.info(filtered[i].tripTypes.first) : null,
+                              ),
                             ),
                           ],
                         ],
@@ -84,19 +89,20 @@ class _TravelersScreenState extends State<TravelersScreen> {
   }
 }
 
-/// يفتح فورم إضافة معتمر جديد.
-Future<void> showAddTravelerSheet(BuildContext context) {
+/// يفتح فورم إضافة معتمر جديد، أو تعديل بيانات معتمر موجود لو اتبعت [customer].
+Future<void> showAddTravelerSheet(BuildContext context, {Customer? customer}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.surface,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    builder: (ctx) => const _AddTravelerSheet(),
+    builder: (ctx) => _AddTravelerSheet(customer: customer),
   );
 }
 
 class _AddTravelerSheet extends StatefulWidget {
-  const _AddTravelerSheet();
+  final Customer? customer;
+  const _AddTravelerSheet({this.customer});
 
   @override
   State<_AddTravelerSheet> createState() => _AddTravelerSheetState();
@@ -109,6 +115,19 @@ class _AddTravelerSheetState extends State<_AddTravelerSheet> {
   String countryCode = '+966';
   bool saving = false;
   String? error;
+
+  bool get isEdit => widget.customer != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final customer = widget.customer;
+    if (customer != null) {
+      nameCtrl.text = customer.name;
+      phoneCtrl.text = customer.phone;
+      emailCtrl.text = customer.email ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -127,11 +146,19 @@ class _AddTravelerSheetState extends State<_AddTravelerSheet> {
       saving = true;
       error = null;
     });
-    final result = await context.read<AppState>().createCustomer(
-          name: nameCtrl.text.trim(),
-          phone: '$countryCode${phoneCtrl.text.trim()}',
-          email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
-        );
+    final state = context.read<AppState>();
+    final result = isEdit
+        ? await state.updateCustomer(
+            id: widget.customer!.id,
+            name: nameCtrl.text.trim(),
+            phone: phoneCtrl.text.trim(),
+            email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+          )
+        : await state.createCustomer(
+            name: nameCtrl.text.trim(),
+            phone: '$countryCode${phoneCtrl.text.trim()}',
+            email: emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
+          );
     if (!mounted) return;
     setState(() => saving = false);
     if (result == null) {
@@ -160,7 +187,7 @@ class _AddTravelerSheetState extends State<_AddTravelerSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(t('add_traveler_title'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text(isEdit ? t('action_edit') : t('add_traveler_title'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                     IconButton(onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.close, size: 18)),
                   ],
                 ),
@@ -171,32 +198,39 @@ class _AddTravelerSheetState extends State<_AddTravelerSheet> {
                 const SizedBox(height: 14),
                 TextField(controller: nameCtrl, decoration: InputDecoration(labelText: t('field_full_name'))),
                 const SizedBox(height: 14),
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 100,
-                      child: DropdownButtonFormField<String>(
-                        value: countryCode,
-                        decoration: InputDecoration(labelText: t('login_country_code')),
-                        items: const [
-                          DropdownMenuItem(value: '+966', child: Text('🇸🇦 +966')),
-                          DropdownMenuItem(value: '+20', child: Text('🇪🇬 +20')),
-                          DropdownMenuItem(value: '+971', child: Text('🇦🇪 +971')),
-                          DropdownMenuItem(value: '+965', child: Text('🇰🇼 +965')),
-                        ],
-                        onChanged: (v) => setState(() => countryCode = v ?? countryCode),
+                if (isEdit)
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(labelText: t('field_phone')),
+                  )
+                else
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 100,
+                        child: DropdownButtonFormField<String>(
+                          value: countryCode,
+                          decoration: InputDecoration(labelText: t('login_country_code')),
+                          items: const [
+                            DropdownMenuItem(value: '+966', child: Text('🇸🇦 +966')),
+                            DropdownMenuItem(value: '+20', child: Text('🇪🇬 +20')),
+                            DropdownMenuItem(value: '+971', child: Text('🇦🇪 +971')),
+                            DropdownMenuItem(value: '+965', child: Text('🇰🇼 +965')),
+                          ],
+                          onChanged: (v) => setState(() => countryCode = v ?? countryCode),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: phoneCtrl,
-                        keyboardType: TextInputType.phone,
-                        decoration: InputDecoration(labelText: t('field_phone')),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: phoneCtrl,
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(labelText: t('field_phone')),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 const SizedBox(height: 14),
                 TextField(controller: emailCtrl, decoration: InputDecoration(labelText: t('field_email'))),
                 const SizedBox(height: 18),

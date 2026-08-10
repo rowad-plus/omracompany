@@ -147,6 +147,21 @@ class AppState extends ChangeNotifier {
       dashboardLoading = false;
       notifyListeners();
     }
+    fetchUnreadNotificationsCount();
+  }
+
+  Map<String, dynamic>? reportsData;
+  bool reportsLoading = false;
+
+  Future<void> fetchReports() async {
+    reportsLoading = true;
+    notifyListeners();
+    try {
+      reportsData = await _api.get('/reports') as Map<String, dynamic>;
+    } finally {
+      reportsLoading = false;
+      notifyListeners();
+    }
   }
 
   // ------- برامج العمرة الفعلية (Backend حقيقي) -------
@@ -221,6 +236,22 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<String?> assignTripDeparturePoint(int id, {String? location, double? lat, double? lng}) async {
+    try {
+      await _api.post('/umrah-trips/$id/assign-departure', {
+        'departure_location': location,
+        'departure_latitude': lat,
+        'departure_longitude': lng,
+      });
+      await fetchApiTrips();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تحديد نقطة الانطلاق';
+    }
+  }
+
   Future<String?> assignTripSupervisors(int id, List<int> supervisorIds) async {
     try {
       await _api.post('/umrah-trips/$id/assign-supervisors', {'supervisor_ids': supervisorIds});
@@ -243,13 +274,56 @@ class AppState extends ChangeNotifier {
   List<AssignableHotel> get bookingHotels =>
       (bookingsData?['hotelsList'] as List<dynamic>? ?? []).map((e) => AssignableHotel.fromJson(e as Map<String, dynamic>)).toList();
 
-  List<AssignableBus> get bookingBuses {
-    final companies = bookingsData?['busCompaniesList'] as List<dynamic>? ?? [];
-    return companies.expand((c) {
-      final company = c as Map<String, dynamic>;
-      final buses = company['buses'] as List<dynamic>? ?? [];
-      return buses.map((b) => AssignableBus.fromJson({...b as Map<String, dynamic>, 'company': company['name']}));
-    }).toList();
+  /// الباص بقى بس رقم — مش لازم يتبع شركة نقل عشان تقدر تسكنه لحجز.
+  List<AssignableBus> get bookingBuses =>
+      (bookingsData?['busesList'] as List<dynamic>? ?? []).map((b) => AssignableBus.fromJson(b as Map<String, dynamic>)).toList();
+
+  /// إضافة فندق سريعة من نفس شاشة تسكين الحجز — بترجع الـ id الجديد عشان
+  /// يتحدد تلقائيًا، وبتحدّث بيانات الحجوزات عشان الفندق يظهر في القايمة.
+  Future<(int?, String?)> quickAddHotelForBooking({
+    required String name,
+    required int cityId,
+    required int stars,
+    required String distanceHaram,
+    String? contact,
+  }) async {
+    try {
+      final res = await _api.post('/hotels', {
+        'name': name,
+        'type': 'umrah',
+        'city_id': cityId,
+        'stars': stars,
+        'distance_haram': distanceHaram,
+        'contact': contact,
+      }) as Map<String, dynamic>;
+      final newId = (res['hotel'] as Map<String, dynamic>)['id'] as int;
+      await fetchBookings();
+      return (newId, null);
+    } on ApiException catch (e) {
+      return (null, e.message);
+    } catch (_) {
+      return (null, 'تعذّر إضافة الفندق');
+    }
+  }
+
+  /// إضافة باص سريعة — بس رقم الباص، مش لازم شركة نقل.
+  Future<(int?, String?)> quickAddBusForBooking({
+    required String busNumber,
+    int? capacity,
+  }) async {
+    try {
+      final res = await _api.post('/buses', {
+        'bus_number': busNumber,
+        'capacity': capacity,
+      }) as Map<String, dynamic>;
+      final newId = (res['bus'] as Map<String, dynamic>)['id'] as int;
+      await fetchBookings();
+      return (newId, null);
+    } on ApiException catch (e) {
+      return (null, e.message);
+    } catch (_) {
+      return (null, 'تعذّر إضافة الباص');
+    }
   }
 
   Future<void> fetchBookings() async {
@@ -292,18 +366,21 @@ class AppState extends ChangeNotifier {
     return (res['companions'] as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
+  /// تسكين الفندق وتسكين الغرفة إجراءان منفصلان في الواجهة، لكن نفس الـ API:
+  /// لو [roomNumber]/[roomCapacity] اتبعتوش، الباك إند بيحافظ على أي تسكين
+  /// غرفة موجود قبل كده (ومنطقيًا العكس صحيح لو الفندق كان متسكن بالفعل).
   Future<String?> assignBookingHotel({
     required int bookingId,
     required int hotelId,
-    required String roomNumber,
-    required int roomCapacity,
+    String? roomNumber,
+    int? roomCapacity,
     List<int> companionIds = const [],
   }) async {
     try {
-      await _api.post('/bookings/$bookingId/assign-hotel', {
+      await _api.patch('/bookings/$bookingId/assign-hotel', {
         'hotel_id': hotelId,
-        'room_number': roomNumber,
-        'room_capacity': roomCapacity,
+        if (roomNumber != null) 'room_number': roomNumber,
+        if (roomCapacity != null) 'room_capacity': roomCapacity,
         'companion_ids': companionIds,
       });
       await fetchBookings();
@@ -520,195 +597,70 @@ class AppState extends ChangeNotifier {
 
   String t(String key) => AppStrings.t(key, language);
 
-  // ------- بيانات تجريبية للبرامج -------
-  final List<Trip> trips = [
-    const Trip(
-      id: 'ramadan',
-      name: 'عمرة رمضان المميزة',
-      destination: 'مكة والمدينة المنورة',
-      days: 10,
-      stars: 5,
-      tier: TripTier.premium,
-      status: TripStatus.active,
-      price: 14400,
-      seatsFilled: 28,
-      seatsTotal: 40,
-      hotelMecca: 'برج الساعة فيرمونت',
-      hotelMedina: 'فندق الحرم انترناشيونال',
-    ),
-    const Trip(
-      id: 'istanbul',
-      name: 'رحلة إسطنبول السياحية',
-      destination: 'إسطنبول',
-      days: 7,
-      stars: 4,
-      tier: TripTier.economy,
-      status: TripStatus.active,
-      price: 17000,
-      seatsFilled: 18,
-      seatsTotal: 25,
-    ),
-    const Trip(
-      id: 'hajj2028',
-      name: 'برنامج حج 2028',
-      destination: 'مكة والمدينة المنورة',
-      days: 30,
-      stars: 5,
-      tier: TripTier.vip,
-      status: TripStatus.draft,
-      price: 44000,
-      seatsFilled: 45,
-      seatsTotal: 60,
-      hotelMecca: 'برج الساعة فيرمونت',
-      hotelMedina: 'فندق الحرم انترناشيونال',
-    ),
-  ];
+  // ------- الإشعارات (Backend حقيقي) -------
+  List<AppNotification> notifications = [];
+  bool notificationsLoading = false;
+  int unreadNotificationsCount = 0;
 
-  // ------- الباصات -------
-  final List<BusInfo> buses = [
-    BusInfo(id: 'bus1', name: 'باص 1 — أ ب ج 1234', capacity: 45, assignedToTrip: true, arrivalTime: '3:00 م'),
-    BusInfo(id: 'bus2', name: 'باص 2 — د هـ و 5678', capacity: 30, assignedToTrip: true, arrivalTime: '4:15 م'),
-    BusInfo(id: 'bus3', name: 'باص 3 — ز ح ط 9012', capacity: 40, assignedToTrip: false, arrivalTime: '6:30 م'),
-  ];
-
-  void toggleBusAssignedToTrip(BusInfo bus, bool value) {
-    bus.assignedToTrip = value;
+  Future<void> fetchNotifications() async {
+    notificationsLoading = true;
     notifyListeners();
-  }
-
-  // ------- المعتمرون التجريبيون -------
-  final List<String> demoTravelers = [
-    'علي إبراهيم حسن',
-    'فريد عبد النور',
-    'ريهام سعيد',
-    'يوسف حسن رضا',
-    'هند عبد الرحمن',
-  ];
-
-  // busId -> assigned traveler names
-  final Map<String, List<String>> busAssignments = {};
-
-  List<String> travelersForBus(String busId) {
-    final assigned = busAssignments[busId];
-    return (assigned != null && assigned.isNotEmpty) ? assigned : demoTravelers;
-  }
-
-  void assignTravelerToBus(String busId, String name) {
-    final list = busAssignments.putIfAbsent(busId, () => []);
-    if (!list.contains(name)) list.add(name);
-    notifyListeners();
-  }
-
-  void removeTravelerFromBus(String busId, String name) {
-    busAssignments[busId]?.remove(name);
-    notifyListeners();
-  }
-
-  // ------- تسكين الغرف: busId -> rooms -------
-  final Map<String, List<RoomAssignment>> hotelRooms = {};
-
-  void addRoom(String busId, RoomAssignment room) {
-    hotelRooms.putIfAbsent(busId, () => []).add(room);
-    notifyListeners();
-  }
-
-  List<String> unhousedTravelers(String busId) {
-    final pool = travelersForBus(busId);
-    final housed = (hotelRooms[busId] ?? [])
-        .expand((r) => r.occupantNames)
-        .toSet();
-    return pool.where((n) => !housed.contains(n)).toList();
-  }
-
-  // ------- الحضور والغياب: "tripId|busId" -> {name: status} -------
-  final Map<String, Map<String, AttendanceStatus>> attendance = {};
-
-  AttendanceStatus attendanceFor(String tripId, String busId, String name) {
-    final key = '$tripId|$busId';
-    return attendance[key]?[name] ?? AttendanceStatus.none;
-  }
-
-  void setAttendance(String tripId, String busId, String name, AttendanceStatus status) {
-    final key = '$tripId|$busId';
-    final map = attendance.putIfAbsent(key, () => {});
-    final current = map[name] ?? AttendanceStatus.none;
-    map[name] = current == status ? AttendanceStatus.none : status;
-    notifyListeners();
-  }
-
-  (int present, int absent) attendanceCounts(String tripId, String busId) {
-    final key = '$tripId|$busId';
-    final map = attendance[key] ?? {};
-    final present = map.values.where((s) => s == AttendanceStatus.present).length;
-    final absent = map.values.where((s) => s == AttendanceStatus.absent).length;
-    return (present, absent);
-  }
-
-  (int present, int absent) allAttendanceTotals() {
-    int present = 0, absent = 0;
-    for (final map in attendance.values) {
-      present += map.values.where((s) => s == AttendanceStatus.present).length;
-      absent += map.values.where((s) => s == AttendanceStatus.absent).length;
+    try {
+      final res = await _api.get('/notifications') as Map<String, dynamic>;
+      notifications = (res['data'] as List<dynamic>).map((e) => AppNotification.fromJson(e as Map<String, dynamic>)).toList();
+      unreadNotificationsCount = res['unread_count'] as int? ?? 0;
+    } finally {
+      notificationsLoading = false;
+      notifyListeners();
     }
-    return (present, absent);
   }
 
-  // ------- المعتمرون (شاشة إدارة المعتمرين) -------
-  final List<Traveler> travelerRecords = [
-    const Traveler(id: 't1', name: 'علي إبراهيم حسن', passportOrId: '—', phone: '—', amountPaid: 39200, tripsCount: 3, category: 'عمرة'),
-    const Traveler(id: 't2', name: 'فريد عبد النور', passportOrId: '—', phone: '—', amountPaid: 48000, tripsCount: 1, category: 'حج'),
-    const Traveler(id: 't3', name: 'ريهام سعيد', passportOrId: '—', phone: '—', amountPaid: 29500, tripsCount: 2, category: 'سياحة'),
-  ];
-
-  void addTravelerRecord(Traveler traveler) {
-    travelerRecords.add(traveler);
-    notifyListeners();
+  Future<void> fetchUnreadNotificationsCount() async {
+    try {
+      final res = await _api.get('/notifications/unread-count') as Map<String, dynamic>;
+      unreadNotificationsCount = res['unread_count'] as int? ?? 0;
+      notifyListeners();
+    } catch (_) {}
   }
 
-  // ------- الفنادق والإقامة -------
-  final List<Hotel> hotels = [
-    const Hotel(name: 'برج الساعة فيرمونت', city: 'مكة المكرمة', stars: 5, distance: '50 متر من الحرم'),
-    const Hotel(name: 'سويسأوتيل المقام', city: 'مكة المكرمة', stars: 5, distance: '150 متر من الحرم'),
-    const Hotel(name: 'فندق الحرم انترناشيونال', city: 'المدينة المنورة', stars: 4, distance: '100 متر من المسجد النبوي'),
-  ];
-
-  void addHotel(Hotel hotel) {
-    hotels.add(hotel);
-    notifyListeners();
+  Future<void> markNotificationRead(int id) async {
+    final index = notifications.indexWhere((n) => n.id == id);
+    if (index == -1 || notifications[index].isRead) return;
+    try {
+      await _api.post('/notifications/$id/read');
+      final n = notifications[index];
+      notifications[index] = AppNotification(
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        timeAgo: n.timeAgo,
+        isRead: true,
+        kind: n.kind,
+      );
+      if (unreadNotificationsCount > 0) unreadNotificationsCount--;
+      notifyListeners();
+    } catch (_) {}
   }
 
-  // ------- النقل والطيران -------
-  final List<TransportItem> transportItems = [
-    const TransportItem(type: TransportType.bus, name: 'أ ب ج 1234', driver: 'محمد عطية', capacity: 45),
-    const TransportItem(type: TransportType.bus, name: 'د هـ و 5678', driver: 'خالد سالم', capacity: 30),
-    const TransportItem(type: TransportType.flight, name: 'مصر للطيران'),
-  ];
-
-  void addTransportItem(TransportItem item) {
-    transportItems.add(item);
-    notifyListeners();
+  Future<void> markAllNotificationsRead() async {
+    try {
+      await _api.post('/notifications/read-all');
+      notifications = notifications
+          .map((n) => AppNotification(
+                id: n.id,
+                type: n.type,
+                title: n.title,
+                body: n.body,
+                timeAgo: n.timeAgo,
+                isRead: true,
+                kind: n.kind,
+              ))
+          .toList();
+      unreadNotificationsCount = 0;
+      notifyListeners();
+    } catch (_) {}
   }
-
-  // ------- المستخدمون والمشرفون -------
-  final List<TeamUser> teamUsers = [
-    const TeamUser(name: 'أحمد السيد', contact: 'ahmed@rowadplus.com', roles: {UserRole.owner, UserRole.tripManager}),
-    const TeamUser(name: 'محمد عطية', contact: '+966 5X XXX XXXX', roles: {UserRole.departureManager, UserRole.busSupervisor}),
-    const TeamUser(name: 'خالد سالم', contact: '+966 5X XXX XXXX', roles: {UserRole.busSupervisor}),
-    const TeamUser(name: 'أحمد فوزي', contact: '+966 5X XXX XXXX', roles: {UserRole.hotelManager}),
-  ];
-
-  void addTeamUser(TeamUser user) {
-    teamUsers.add(user);
-    notifyListeners();
-  }
-
-  // ------- الإشعارات -------
-  final List<AppNotification> notifications = [
-    const AppNotification(title: 'حجز جديد — علي إبراهيم حسن', timeAgo: 'time_ago_5_min', kind: NotificationKind.info),
-    const AppNotification(title: 'دفعة مستلمة من سارة أحمد', timeAgo: 'time_ago_20_min', kind: NotificationKind.warning),
-    const AppNotification(title: 'إلغاء حجز — رحلة إسطنبول', timeAgo: 'time_ago_3_hours', kind: NotificationKind.danger),
-    const AppNotification(title: 'تقييم جديد 5 نجوم على برنامج الحج', timeAgo: 'time_ago_1_day', kind: NotificationKind.success),
-  ];
 
   // ------- الفنادق والإقامة (Backend حقيقي) -------
   List<CompanyHotel> companyHotels = [];
@@ -754,6 +706,35 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<String?> updateCompanyHotel({
+    required int id,
+    required String name,
+    required int cityId,
+    required int stars,
+    required String distanceHaram,
+    String? contact,
+  }) async {
+    try {
+      final res = await _api.put('/hotels/$id', {
+        'name': name,
+        'type': 'umrah',
+        'city_id': cityId,
+        'stars': stars,
+        'distance_haram': distanceHaram,
+        'contact': contact,
+      }) as Map<String, dynamic>;
+      final updated = CompanyHotel.fromJson(res['hotel'] as Map<String, dynamic>);
+      final idx = companyHotels.indexWhere((h) => h.id == id);
+      if (idx != -1) companyHotels[idx] = updated;
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تعديل الفندق';
+    }
+  }
+
   Future<String?> deleteCompanyHotel(int id) async {
     try {
       await _api.delete('/hotels/$id');
@@ -771,6 +752,8 @@ class AppState extends ChangeNotifier {
   List<CompanyBusCompany> busCompanies = [];
   bool busCompaniesLoading = false;
 
+  List<CompanyBus> unassignedBuses = [];
+
   Future<void> fetchBusCompanies() async {
     busCompaniesLoading = true;
     notifyListeners();
@@ -778,6 +761,8 @@ class AppState extends ChangeNotifier {
       final res = await _api.get('/bus-companies') as Map<String, dynamic>;
       busCompanies =
           (res['busCompanies'] as List<dynamic>).map((e) => CompanyBusCompany.fromJson(e as Map<String, dynamic>)).toList();
+      unassignedBuses =
+          (res['unassignedBuses'] as List<dynamic>? ?? []).map((e) => CompanyBus.fromJson(e as Map<String, dynamic>)).toList();
     } finally {
       busCompaniesLoading = false;
       notifyListeners();
@@ -796,8 +781,20 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<String?> updateBusCompany({required int id, required String name, String? contact}) async {
+    try {
+      await _api.put('/bus-companies/$id', {'name': name, 'contact': contact});
+      await fetchBusCompanies();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تعديل شركة الأتوبيسات';
+    }
+  }
+
   Future<String?> createBus({
-    required int busCompanyId,
+    int? busCompanyId,
     required String busNumber,
     int? capacity,
     String? driverName,
@@ -805,7 +802,7 @@ class AppState extends ChangeNotifier {
   }) async {
     try {
       await _api.post('/buses', {
-        'bus_company_id': busCompanyId,
+        if (busCompanyId != null) 'bus_company_id': busCompanyId,
         'bus_number': busNumber,
         'capacity': capacity,
         'driver_name': driverName,
@@ -817,6 +814,31 @@ class AppState extends ChangeNotifier {
       return e.message;
     } catch (_) {
       return 'تعذّر إضافة الباص';
+    }
+  }
+
+  Future<String?> updateBus({
+    required int id,
+    int? busCompanyId,
+    required String busNumber,
+    int? capacity,
+    String? driverName,
+    String? driverPhone,
+  }) async {
+    try {
+      await _api.put('/buses/$id', {
+        'bus_company_id': busCompanyId,
+        'bus_number': busNumber,
+        'capacity': capacity,
+        'driver_name': driverName,
+        'driver_phone': driverPhone,
+      });
+      await fetchBusCompanies();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تعديل الباص';
     }
   }
 
@@ -847,6 +869,34 @@ class AppState extends ChangeNotifier {
       return e.message;
     } catch (_) {
       return 'تعذّر إضافة المسافر';
+    }
+  }
+
+  /// رد التعديل من الباك إند بيرجّع الاسم/الجوال/الإيميل بس (من غير إحصائيات
+  /// الحجوزات)، فبنحدّث نفس عنصر القايمة بدل ما نستبدله بالكامل عشان محافظش
+  /// نفقد bookings_count/total_spent المعروضين بالفعل.
+  Future<String?> updateCustomer({required int id, required String name, required String phone, String? email}) async {
+    try {
+      await _api.put('/customers/$id', {'name': name, 'phone': phone, 'email': email});
+      final idx = customers.indexWhere((c) => c.id == id);
+      if (idx != -1) {
+        final old = customers[idx];
+        customers[idx] = Customer(
+          id: old.id,
+          name: name,
+          phone: phone,
+          email: email,
+          bookingsCount: old.bookingsCount,
+          totalSpent: old.totalSpent,
+          tripTypes: old.tripTypes,
+        );
+      }
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تعديل بيانات المسافر';
     }
   }
 
@@ -890,6 +940,195 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // ------- بيانات الحساب البنكي (Backend حقيقي) -------
+  BankInfo? bankInfo;
+  bool bankInfoLoading = false;
+
+  Future<void> fetchBankInfo() async {
+    bankInfoLoading = true;
+    notifyListeners();
+    try {
+      final res = await _api.get('/company/bank-info') as Map<String, dynamic>;
+      bankInfo = BankInfo.fromJson(res);
+    } finally {
+      bankInfoLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> updateBankInfo({
+    required String bankName,
+    required String bankAccountHolder,
+    required String bankAccountNumber,
+    required String bankIban,
+  }) async {
+    try {
+      await _api.put('/company/bank-info', {
+        'bank_name': bankName,
+        'bank_account_holder': bankAccountHolder,
+        'bank_account_number': bankAccountNumber,
+        'bank_iban': bankIban,
+      });
+      bankInfo = BankInfo(
+        bankName: bankName,
+        bankAccountHolder: bankAccountHolder,
+        bankAccountNumber: bankAccountNumber,
+        bankIban: bankIban,
+      );
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر حفظ بيانات الحساب البنكي';
+    }
+  }
+
+  // ------- فروع الشركة (Backend حقيقي) -------
+  List<CompanyBranchInfo> branches = [];
+  bool branchesLoading = false;
+
+  Future<void> fetchBranches() async {
+    branchesLoading = true;
+    notifyListeners();
+    try {
+      final res = await _api.get('/branches') as Map<String, dynamic>;
+      branches = (res['branches'] as List<dynamic>).map((e) => CompanyBranchInfo.fromJson(e as Map<String, dynamic>)).toList();
+    } finally {
+      branchesLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> createBranch({required String name, String? city, String? phone, String? manager}) async {
+    try {
+      final res = await _api.post('/branches', {'name': name, 'city': city, 'phone': phone, 'manager': manager}) as Map<String, dynamic>;
+      branches.add(CompanyBranchInfo.fromJson(res['branch'] as Map<String, dynamic>));
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر إضافة الفرع';
+    }
+  }
+
+  Future<String?> updateBranch({required int id, required String name, String? city, String? phone, String? manager}) async {
+    try {
+      final res = await _api.put('/branches/$id', {'name': name, 'city': city, 'phone': phone, 'manager': manager}) as Map<String, dynamic>;
+      final updated = CompanyBranchInfo.fromJson(res['branch'] as Map<String, dynamic>);
+      final idx = branches.indexWhere((b) => b.id == id);
+      if (idx != -1) branches[idx] = updated;
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تعديل الفرع';
+    }
+  }
+
+  Future<String?> deleteBranch(int id) async {
+    try {
+      await _api.delete('/branches/$id');
+      branches.removeWhere((b) => b.id == id);
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر حذف الفرع';
+    }
+  }
+
+  // ------- الجلسات النشطة (Backend حقيقي) -------
+  List<AccountSession> accountSessions = [];
+  bool sessionsLoading = false;
+
+  Future<void> fetchAccountSessions() async {
+    sessionsLoading = true;
+    notifyListeners();
+    try {
+      final res = await _api.get('/sessions') as Map<String, dynamic>;
+      accountSessions = (res['sessions'] as List<dynamic>).map((e) => AccountSession.fromJson(e as Map<String, dynamic>)).toList();
+    } finally {
+      sessionsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> revokeSession(int id) async {
+    try {
+      await _api.delete('/sessions/$id');
+      accountSessions.removeWhere((s) => s.id == id);
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر إنهاء الجلسة';
+    }
+  }
+
+  Future<String?> revokeOtherSessions() async {
+    try {
+      await _api.delete('/sessions');
+      accountSessions.removeWhere((s) => !s.isCurrent);
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر إنهاء الجلسات الأخرى';
+    }
+  }
+
+  Future<String?> changePassword({required String currentPassword, required String newPassword}) async {
+    try {
+      await _api.put('/profile/password', {
+        'current_password': currentPassword,
+        'password': newPassword,
+        'password_confirmation': newPassword,
+      });
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تغيير كلمة المرور';
+    }
+  }
+
+  Future<String?> uploadCompanyLogo(List<int> bytes) async {
+    try {
+      final res = await _api.postMultipart('/company/logo', {}, files: [MapEntry('logo', bytes)]) as Map<String, dynamic>;
+      final url = res['url'] as String?;
+      if (url != null && companyInfo != null) {
+        companyInfo = CompanyInfo(
+          id: companyInfo!.id,
+          name: companyInfo!.name,
+          fullName: companyInfo!.fullName,
+          type: companyInfo!.type,
+          commercialRegister: companyInfo!.commercialRegister,
+          foundedYear: companyInfo!.foundedYear,
+          about: companyInfo!.about,
+          phone: companyInfo!.phone,
+          whatsapp: companyInfo!.whatsapp,
+          email: companyInfo!.email,
+          website: companyInfo!.website,
+          addressText: companyInfo!.addressText,
+          slogan: companyInfo!.slogan,
+          logo: url,
+        );
+      }
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر رفع شعار الشركة';
+    }
+  }
+
   // ------- خيارات نموذج إنشاء البرنامج (Backend حقيقي) -------
   List<SaudiCity> tripFormCities = [];
   List<AssignableHotel> tripFormHotels = [];
@@ -910,14 +1149,56 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<String?> createTrip(Map<String, dynamic> data) async {
+  Future<String?> createTrip(Map<String, dynamic> data, {List<List<int>> images = const []}) async {
     try {
-      await _api.post('/umrah-trips', data);
+      await _api.postMultipart(
+        '/umrah-trips',
+        data,
+        files: [for (final bytes in images) MapEntry('images[]', bytes)],
+      );
       return null;
     } on ApiException catch (e) {
       return e.message;
     } catch (_) {
       return 'تعذّر إنشاء البرنامج';
+    }
+  }
+
+  Future<Map<String, dynamic>?> fetchTripEditData(int tripId) async {
+    try {
+      return await _api.get('/umrah-trips/$tripId/edit-data') as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> deleteTripImage(int imageId) async {
+    try {
+      await _api.delete('/umrah-trip-images/$imageId');
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر حذف الصورة';
+    }
+  }
+
+  /// تعديل برنامج موجود — لو [images] اتبعتت بتتضاف على الصور الموجودة
+  /// (الباك إند بيحافظ عليها لو keep_images=true).
+  Future<String?> updateTrip(int tripId, Map<String, dynamic> data, {List<List<int>> images = const []}) async {
+    try {
+      await _api.postMultipart(
+        '/umrah-trips/$tripId',
+        {...data, 'keep_images': true},
+        files: [for (final bytes in images) MapEntry('images[]', bytes)],
+        method: 'PUT',
+      );
+      await fetchApiTrips();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تعديل البرنامج';
     }
   }
 }

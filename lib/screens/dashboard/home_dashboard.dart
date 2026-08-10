@@ -71,11 +71,34 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                  ),
-                  icon: const Icon(Icons.notifications_outlined),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                        );
+                        if (context.mounted) context.read<AppState>().fetchUnreadNotificationsCount();
+                      },
+                      icon: const Icon(Icons.notifications_outlined),
+                    ),
+                    if (state.unreadNotificationsCount > 0)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(10)),
+                          constraints: const BoxConstraints(minWidth: 16),
+                          child: Text(
+                            state.unreadNotificationsCount > 9 ? '9+' : '${state.unreadNotificationsCount}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
