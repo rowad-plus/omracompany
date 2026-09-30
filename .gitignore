@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Contains a plaintext server password — never commit/push this
+/CLAUDE.md
+
+# Local backup copies
+*.bak
+*.bak-*

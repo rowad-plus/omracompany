@@ -17,16 +17,27 @@ class _HotelManagerTripsState extends State<HotelManagerTrips> {
   void initState() {
     super.initState();
     context.read<AppState>().fetchApiTrips();
+    context.read<AppState>().fetchBookings();
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final t = state.t;
-    final trips = state.apiTrips.where((tr) => tr.status == 'active').toList();
+    final bookings = state.bookingsList.where((b) => b['status'] != 'cancelled').toList();
+
+    int waitingCountFor(int tripId) =>
+        bookings.where((b) => b['trip_id'] == tripId && b['hotel_id'] == null).length;
+    int totalCountFor(int tripId) => bookings.where((b) => b['trip_id'] == tripId).length;
+
+    final trips = state.apiTrips.where((tr) => tr.status == 'active').toList()
+      ..sort((a, b) => waitingCountFor(b.id).compareTo(waitingCountFor(a.id)));
 
     return RefreshIndicator(
-      onRefresh: () => context.read<AppState>().fetchApiTrips(),
+      onRefresh: () async {
+        await state.fetchApiTrips();
+        await state.fetchBookings();
+      },
       child: state.apiTripsLoading && state.apiTrips.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -44,11 +55,13 @@ class _HotelManagerTripsState extends State<HotelManagerTrips> {
                         MaterialPageRoute(builder: (_) => RoomAssignScreen(trip: trip)),
                       ),
                       child: InfoRow(
-                        leading: const InitialsAvatar(initials: '🌙', size: 32),
+                        leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: trip.thumbnail),
                         title: trip.title,
-                        subtitle: trip.hotelName != null
-                            ? '${trip.hotelName} · ${trip.bookingsCount} ${t('unit_seat')}'
-                            : t('no_hotel_assigned'),
+                        subtitle: totalCountFor(trip.id) == 0
+                            ? t('no_hotel_assigned')
+                            : waitingCountFor(trip.id) == 0
+                                ? t('all_housed')
+                                : '${waitingCountFor(trip.id)} ${t('stat_waiting_housing')}',
                         trailing: const ForwardChevron(),
                       ),
                     ),

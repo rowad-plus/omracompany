@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'system_bars.dart';
 
 /// نظام الألوان الأساسي للتطبيق — نفس هوية النسخة التجريبية على الويب.
 class AppColors {
@@ -48,6 +49,7 @@ class AppTheme {
         surface: AppColors.surface,
       ),
       appBarTheme: const AppBarTheme(
+        systemOverlayStyle: systemBarsStyle,
         backgroundColor: AppColors.bg,
         foregroundColor: AppColors.text,
         elevation: 0,

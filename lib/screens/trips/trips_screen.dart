@@ -146,36 +146,37 @@ class _TripCard extends StatelessWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => TripDetailScreen(trip: trip)),
             ),
-            child: Container(
-              height: 90,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: active
-                      ? [AppColors.primary, AppColors.primaryDark]
-                      : [const Color(0xFF5C655F), const Color(0xFF1B211F)],
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Stack(
-                children: [
-                  const Center(child: Icon(Icons.nightlight_round, color: Colors.white, size: 28)),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .92),
-                        borderRadius: BorderRadius.circular(20),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: SizedBox(
+                height: 90,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (trip.thumbnail != null && trip.thumbnail!.isNotEmpty)
+                      Image.network(
+                        trip.thumbnail!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => _cardHeroGradient(active),
+                        loadingBuilder: (context, child, progress) => progress == null ? child : _cardHeroGradient(active),
+                      )
+                    else
+                      _cardHeroGradient(active),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: .92),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(active ? t('status_active') : t('status_draft'),
+                            style: const TextStyle(fontSize: 10, color: AppColors.primaryDark, fontWeight: FontWeight.w500)),
                       ),
-                      child: Text(active ? t('status_active') : t('status_draft'),
-                          style: const TextStyle(fontSize: 10, color: AppColors.primaryDark, fontWeight: FontWeight.w500)),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -242,6 +243,20 @@ class _TripCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _cardHeroGradient(bool active) => Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: active
+                ? [AppColors.primary, AppColors.primaryDark]
+                : [const Color(0xFF5C655F), const Color(0xFF1B211F)],
+          ),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.nightlight_round, color: Colors.white, size: 28),
+      );
 
   Widget _tierBadge(String tier, String Function(String) t) {
     switch (tier) {

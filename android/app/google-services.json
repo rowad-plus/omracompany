@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "185892260245",
+    "project_id": "omraway-office",
+    "storage_bucket": "omraway-office.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:185892260245:android:58f138d0522ac4a5d2ce9c",
+        "android_client_info": {
+          "package_name": "omraway.office"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjDeZ7DCBmYO8NqeHHHIFPmDh1QHerOVc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

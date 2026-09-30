@@ -31,15 +31,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   Future<void> _save() async {
     final t = context.read<AppState>().t;
     if (currentCtrl.text.isEmpty || newCtrl.text.isEmpty) {
-      setState(() => error = 'الرجاء إدخال كلمة المرور الحالية والجديدة');
+      setState(() => error = t('err_password_fields_required'));
       return;
     }
     if (newCtrl.text.length < 8) {
-      setState(() => error = 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل');
+      setState(() => error = t('err_new_password_min_length'));
       return;
     }
     if (newCtrl.text != confirmCtrl.text) {
-      setState(() => error = 'تأكيد كلمة المرور غير متطابق');
+      setState(() => error = t('err_password_mismatch'));
       return;
     }
 

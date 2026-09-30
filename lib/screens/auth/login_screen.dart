@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../services/location_service.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 
@@ -42,14 +43,29 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     countryCode = _detectDefaultCountryCode();
+    _refineCountryCodeFromIp();
   }
 
-  /// بيحدد مفتاح الدولة الافتراضي حسب إعدادات لغة/منطقة الجهاز اللي داخل
-  /// منه المستخدم — مع إمكانية تغييره يدويًا من القائمة أسفل حقل الجوال.
+  /// بيحدد مفتاح الدولة الافتراضي فورًا حسب إعدادات لغة/منطقة الجهاز —
+  /// نتيجة متاحة على طول من غير أي طلب شبكة، وتفضل زي ما هي لو موقع
+  /// المستخدم الفعلي (IP) ما قدرناش نحدده أو مطابقش أي دولة مدعومة.
   String _detectDefaultCountryCode() {
     final deviceCountry = PlatformDispatcher.instance.locale.countryCode;
     final match = _countryOptions.where((c) => c.isoCode == deviceCountry);
     return match.isNotEmpty ? match.first.dialCode : _countryOptions.first.dialCode;
+  }
+
+  /// بيحسّن الاختيار الافتراضي بموقع المستخدم الفعلي (عبر IP، من غير أي
+  /// إذن مطلوب) بعد ما الشاشة تفتح — لو المستخدم غيّر الاختيار يدويًا
+  /// قبل ما الطلب يخلص، بنسيب اختياره زي ما هو.
+  Future<void> _refineCountryCodeFromIp() async {
+    final detectedAt = countryCode;
+    final code = await LocationService.detectCountryCode();
+    if (!mounted || code == null) return;
+    final match = _countryOptions.where((c) => c.isoCode == code);
+    if (match.isEmpty) return;
+    if (countryCode != detectedAt) return; // المستخدم غيّرها يدويًا فعلًا
+    setState(() => countryCode = match.first.dialCode);
   }
 
   @override
@@ -66,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final phone = phoneCtrl.text.trim();
 
     if (password.isEmpty || (mode == _LoginMode.email ? email.isEmpty : phone.isEmpty)) {
-      setState(() => error = 'الرجاء إدخال البيانات المطلوبة وكلمة المرور');
+      setState(() => error = context.read<AppState>().t('err_login_required'));
       return;
     }
 
@@ -108,19 +124,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   Center(
                     child: Column(
                       children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text('رب',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-                        ),
+                        Image.asset('assets/images/omraway_kaaba.png',
+                            width: 80, fit: BoxFit.contain),
                         const SizedBox(height: 12),
-                        const Text('رواد بلس', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Text('Omraway Business', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 2),
                         Text(t('login_subtitle'),
                             style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),

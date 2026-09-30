@@ -231,7 +231,7 @@ class _AddHotelSheetState extends State<_AddHotelSheet> {
 
   Future<void> _save() async {
     if (nameCtrl.text.trim().isEmpty || cityId == null || distanceCtrl.text.trim().isEmpty) {
-      setState(() => error = 'الرجاء إدخال اسم الفندق والمدينة والمسافة من الحرم');
+      setState(() => error = context.read<AppState>().t('err_hotel_fields_required'));
       return;
     }
     setState(() {

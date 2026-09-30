@@ -19,6 +19,17 @@ class ApiException implements Exception {
 class ApiClient {
   static const String baseUrl = 'https://omraway.com/api/v1/provider';
 
+  /// من غيرها أي طلب على شبكة ضعيفة كان بيفضل معلّق للأبد (spinner ما
+  /// بيخلصش) لحد ما المستخدم يسيب الشاشة ويرجعلها تاني. دلوقتي بيفشل
+  /// برسالة واضحة بعد مهلة معقولة بدل ما يعلّق.
+  static const Duration _timeout = Duration(seconds: 20);
+
+  /// عميل HTTP واحد مشترك بدل `http.get` المباشر — كل نداء مباشر كان بيفتح
+  /// اتصال TCP + مصافحة TLS جديدة للسيرفر (في ألمانيا)، وده على شبكة جوال
+  /// في السعودية بياخد ثواني قبل ما الطلب نفسه يبدأ. العميل المشترك بيسيب
+  /// الاتصال مفتوح (keep-alive) فكل الطلبات بعد أول واحد بتمشي على طول.
+  final http.Client _http = http.Client();
+
   String? _token;
 
   void setToken(String? token) => _token = token;
@@ -30,6 +41,9 @@ class ApiClient {
       };
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
+
+  Never _throwTimeout() =>
+      throw ApiException(0, 'انتهت مهلة الاتصال بالخادم، تحقق من الإنترنت وحاول مجددًا');
 
   dynamic _decode(http.Response res) {
     Map<String, dynamic>? body;
@@ -57,27 +71,35 @@ class ApiClient {
   }
 
   Future<dynamic> get(String path) async {
-    final res = await http.get(_uri(path), headers: _headers);
+    final res = await _http.get(_uri(path), headers: _headers).timeout(_timeout, onTimeout: _throwTimeout);
     return _decode(res);
   }
 
   Future<dynamic> post(String path, [Map<String, dynamic>? data]) async {
-    final res = await http.post(_uri(path), headers: _headers, body: jsonEncode(data ?? {}));
+    final res = await _http
+        .post(_uri(path), headers: _headers, body: jsonEncode(data ?? {}))
+        .timeout(_timeout, onTimeout: _throwTimeout);
     return _decode(res);
   }
 
   Future<dynamic> put(String path, [Map<String, dynamic>? data]) async {
-    final res = await http.put(_uri(path), headers: _headers, body: jsonEncode(data ?? {}));
+    final res = await _http
+        .put(_uri(path), headers: _headers, body: jsonEncode(data ?? {}))
+        .timeout(_timeout, onTimeout: _throwTimeout);
     return _decode(res);
   }
 
   Future<dynamic> patch(String path, [Map<String, dynamic>? data]) async {
-    final res = await http.patch(_uri(path), headers: _headers, body: jsonEncode(data ?? {}));
+    final res = await _http
+        .patch(_uri(path), headers: _headers, body: jsonEncode(data ?? {}))
+        .timeout(_timeout, onTimeout: _throwTimeout);
     return _decode(res);
   }
 
-  Future<dynamic> delete(String path) async {
-    final res = await http.delete(_uri(path), headers: _headers);
+  Future<dynamic> delete(String path, [Map<String, dynamic>? data]) async {
+    final res = await _http
+        .delete(_uri(path), headers: _headers, body: data == null ? null : jsonEncode(data))
+        .timeout(_timeout, onTimeout: _throwTimeout);
     return _decode(res);
   }
 
@@ -119,7 +141,7 @@ class ApiClient {
       request.files.add(http.MultipartFile.fromBytes(files[i].key, files[i].value, filename: 'image_$i.jpg'));
     }
 
-    final streamed = await request.send();
+    final streamed = await _http.send(request).timeout(const Duration(seconds: 60), onTimeout: _throwTimeout);
     final res = await http.Response.fromStream(streamed);
     return _decode(res);
   }

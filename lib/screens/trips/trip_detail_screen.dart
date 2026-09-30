@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/departure_point_sheet.dart';
 import '../../widgets/shared_widgets.dart';
 import '../wizard/trip_wizard_screen.dart';
 
@@ -89,18 +90,20 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(18),
         children: [
-          Container(
-            height: 100,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              gradient: LinearGradient(
-                colors: isStopped
-                    ? [const Color(0xFF5C655F), const Color(0xFF1B211F)]
-                    : [AppColors.primary, AppColors.primaryDark],
-              ),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(Icons.nightlight_round, color: Colors.white, size: 30),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: (trip.thumbnail != null && trip.thumbnail!.isNotEmpty)
+                ? Image.network(
+                    trip.thumbnail!,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => _heroPlaceholder(isStopped),
+                    loadingBuilder: (context, child, progress) => progress == null
+                        ? child
+                        : SizedBox(height: 160, child: _heroPlaceholder(isStopped)),
+                  )
+                : _heroPlaceholder(isStopped),
           ),
           const SizedBox(height: 16),
           AppCard(
@@ -140,6 +143,17 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         onTap: () => _deleteTrip(t),
                         color: AppColors.danger,
                       ),
+                      _DetailActionIcon(
+                        icon: Icons.location_on_outlined,
+                        label: t('action_departure_point'),
+                        onTap: () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: AppColors.surface,
+                          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                          builder: (ctx) => DeparturePointSheet(trip: trip),
+                        ),
+                      ),
                     ],
                   ),
           ),
@@ -171,6 +185,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
       ),
     );
   }
+
+  Widget _heroPlaceholder(bool isStopped) => Container(
+        height: 160,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isStopped
+                ? [const Color(0xFF5C655F), const Color(0xFF1B211F)]
+                : [AppColors.primary, AppColors.primaryDark],
+          ),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.nightlight_round, color: Colors.white, size: 30),
+      );
 
   Widget _fact(String label, String value) => SizedBox(
         width: 140,

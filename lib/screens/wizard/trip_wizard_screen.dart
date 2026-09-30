@@ -132,7 +132,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
     setState(() => loadingEditData = false);
 
     if (data == null) {
-      setState(() => error = 'تعذّر تحميل بيانات البرنامج');
+      setState(() => error = t('err_trip_load_failed'));
       return;
     }
 
@@ -240,12 +240,12 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
   void _next() {
     if (step == 0) {
       if (titleCtrl.text.trim().isEmpty || cityId == null || durationCtrl.text.trim().isEmpty) {
-        setState(() => error = 'الرجاء إدخال اسم البرنامج، مدينة الانطلاق، وعدد الأيام');
+        setState(() => error = t('err_trip_basic_required'));
         return;
       }
     }
     if (step == 1 && priceCtrl.text.trim().isEmpty) {
-      setState(() => error = 'الرجاء إدخال سعر البرنامج');
+      setState(() => error = t('err_trip_price_required'));
       return;
     }
     setState(() => error = null);
@@ -598,6 +598,34 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
     );
   }
 
+  /// Compares a private-room row with the shared-room price for the same
+  /// group (per-person price × persons), which is what customers pay when
+  /// they don't choose a private room.
+  Widget _familyRowHint(_FamilyPriceRow row) {
+    final n = int.tryParse(row.personsCtrl.text.trim());
+    final price = double.tryParse(row.priceCtrl.text.trim());
+    final unit = double.tryParse(priceCtrl.text.trim());
+    String text = '';
+    Color color = AppColors.textSecondary;
+    if (n == 1) {
+      text = t('family_pricing_one_person_warning');
+      color = AppColors.danger;
+    } else if (n != null && n > 1 && unit != null && unit > 0) {
+      final shared = unit * n;
+      if (price != null && price > 0 && price < shared) {
+        text = '${t('family_pricing_cheaper_warning')} (${shared.toStringAsFixed(0)})';
+        color = AppColors.danger;
+      } else {
+        text = '${t('family_pricing_shared_hint')} $n × ${unit.toStringAsFixed(0)} = ${shared.toStringAsFixed(0)}';
+      }
+    }
+    if (text.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, right: 4, left: 4),
+      child: Text(text, style: TextStyle(fontSize: 11, color: color)),
+    );
+  }
+
   Widget _stepPricing() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,37 +634,49 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
           controller: priceCtrl,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(labelText: t('field_price_per_person')),
+          onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 18),
-        Text(t('family_pricing_label'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+        Text(t('family_pricing_label'),
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
+        Text(t('family_pricing_hint'), style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
         for (var i = 0; i < familyPrices.length; i++)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: familyPrices[i].personsCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: t('room_occupant_count_label')),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: familyPrices[i].personsCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: t('room_occupant_count_label')),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: familyPrices[i].priceCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: t('field_price_paid')),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18, color: AppColors.danger),
+                      onPressed: () => setState(() {
+                        familyPrices[i].dispose();
+                        familyPrices.removeAt(i);
+                      }),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: familyPrices[i].priceCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(labelText: t('field_price_paid')),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 18, color: AppColors.danger),
-                  onPressed: () => setState(() {
-                    familyPrices[i].dispose();
-                    familyPrices.removeAt(i);
-                  }),
-                ),
+                _familyRowHint(familyPrices[i]),
               ],
             ),
           ),

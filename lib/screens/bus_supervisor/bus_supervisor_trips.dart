@@ -44,7 +44,7 @@ class _BusSupervisorTripsState extends State<BusSupervisorTrips> {
                         MaterialPageRoute(builder: (_) => AttendanceScreen(trip: trip)),
                       ),
                       child: InfoRow(
-                        leading: const InitialsAvatar(initials: '🌙', size: 32),
+                        leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: trip.thumbnail),
                         title: trip.title,
                         subtitle: '${trip.bookingsCount} ${t('unit_seat')}',
                         trailing: const ForwardChevron(),

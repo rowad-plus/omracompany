@@ -77,7 +77,7 @@ class _BusSupervisorHomeState extends State<BusSupervisorHome> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: InfoRow(
-                        leading: const InitialsAvatar(initials: '🌙', size: 32),
+                        leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: activeTrips[i].thumbnail),
                         title: activeTrips[i].title,
                         subtitle: '${activeTrips[i].bookingsCount} ${t('unit_seat')}',
                         trailing: const ForwardChevron(),

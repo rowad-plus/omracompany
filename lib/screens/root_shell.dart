@@ -77,7 +77,16 @@ class _RootShellState extends State<RootShell> {
     final safeIndex = index.clamp(0, tabs.length - 1);
 
     return Scaffold(
-      body: SafeArea(child: tabs[safeIndex].screen),
+      // IndexedStack instead of swapping the child directly — keeps every
+      // tab's screen mounted (and its already-fetched data) across
+      // switches, instead of tearing down and re-fetching from scratch
+      // each time the user comes back to a tab.
+      body: SafeArea(
+        child: IndexedStack(
+          index: safeIndex,
+          children: [for (final tab in tabs) tab.screen],
+        ),
+      ),
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
           backgroundColor: AppColors.surface,

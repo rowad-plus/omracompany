@@ -118,8 +118,9 @@ class AppNotification {
   });
 
   static NotificationKind _kindForType(String type) {
-    if (type.contains('cancelled')) return NotificationKind.danger;
-    if (type.contains('confirmed')) return NotificationKind.success;
+    if (type.contains('cancelled') || type.contains('failed')) return NotificationKind.danger;
+    if (type.contains('confirmed') || type.contains('paid')) return NotificationKind.success;
+    if (type.contains('cleared') || type.contains('changed')) return NotificationKind.warning;
     return NotificationKind.info;
   }
 
@@ -401,6 +402,7 @@ class ApiTrip {
   final String? departureLocation;
   final double? departureLatitude;
   final double? departureLongitude;
+  final String? thumbnail;
 
   const ApiTrip({
     required this.id,
@@ -426,6 +428,7 @@ class ApiTrip {
     this.departureLocation,
     this.departureLatitude,
     this.departureLongitude,
+    this.thumbnail,
   });
 
   static double? _toDoubleOrNull(dynamic v) {
@@ -458,6 +461,7 @@ class ApiTrip {
         departureLocation: j['departure_location'] as String?,
         departureLatitude: _toDoubleOrNull(j['departure_latitude']),
         departureLongitude: _toDoubleOrNull(j['departure_longitude']),
+        thumbnail: j['thumbnail'] as String?,
       );
 }
 

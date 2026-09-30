@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
@@ -56,6 +57,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset('assets/images/omraway_kaaba.png',
+                      width: 64, fit: BoxFit.contain),
+                  const SizedBox(width: 10),
+                  Text(state.language == AppLanguage.ar ? 'طريق العمرة' : 'Omraway',
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+                ],
+              ),
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
             child: Row(
               children: [
@@ -66,7 +82,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       Text('${t('greeting_hello')}، ${state.accountName}',
                           style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 2),
-                      Text('${state.companyName ?? 'رواد بلس'} — ${t('brand_tagline')}',
+                      Text('${state.companyName ?? 'Omraway'} — ${t('brand_tagline')}',
                           style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                     ],
                   ),
@@ -133,7 +149,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: InfoRow(
-                            leading: const InitialsAvatar(initials: '🌙', size: 32),
+                            leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: trip['thumbnail'] as String?),
                             title: trip['title'] as String? ?? '',
                             subtitle:
                                 '${trip['duration']} ${t('unit_days')} — ${trip['booked']}/${trip['seats']} ${t('unit_seat')}',

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/models.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
 extension NotificationKindX on NotificationKind {
@@ -98,6 +100,7 @@ class InitialsAvatar extends StatelessWidget {
   final double size;
   final Color background;
   final Color foreground;
+  final String? imageUrl;
 
   const InitialsAvatar({
     super.key,
@@ -105,10 +108,27 @@ class InitialsAvatar extends StatelessWidget {
     this.size = 36,
     this.background = AppColors.primaryLight,
     this.foreground = AppColors.primaryDark,
+    this.imageUrl,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          imageUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _fallback(),
+          loadingBuilder: (context, child, progress) => progress == null ? child : _fallback(),
+        ),
+      );
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() {
     return CircleAvatar(
       radius: size / 2,
       backgroundColor: background,
@@ -181,7 +201,8 @@ class SectionHeader extends StatelessWidget {
           if (onSeeAll != null)
             GestureDetector(
               onTap: onSeeAll,
-              child: const Text('عرض الكل', style: TextStyle(fontSize: 12.5, color: AppColors.primary)),
+              child: Text(context.watch<AppState>().t('see_all'),
+                  style: const TextStyle(fontSize: 12.5, color: AppColors.primary)),
             ),
         ],
       ),

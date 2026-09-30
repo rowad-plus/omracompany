@@ -27,7 +27,14 @@ class _HotelManagerHomeState extends State<HotelManagerHome> {
     final bookings = state.bookingsList.where((b) => b['status'] != 'cancelled').toList();
     final roomsFormed = bookings.where((b) => b['hotel_id'] != null).length;
     final waiting = bookings.where((b) => b['hotel_id'] == null).length;
-    final activeTrips = state.apiTrips.where((tr) => tr.status == 'active').take(2).toList();
+
+    int waitingCountFor(int tripId) =>
+        bookings.where((b) => b['trip_id'] == tripId && b['hotel_id'] == null).length;
+    int totalCountFor(int tripId) => bookings.where((b) => b['trip_id'] == tripId).length;
+
+    final activeTrips = state.apiTrips.where((tr) => tr.status == 'active').toList()
+      ..sort((a, b) => waitingCountFor(b.id).compareTo(waitingCountFor(a.id)));
+    final topTrips = activeTrips.take(2).toList();
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -62,7 +69,7 @@ class _HotelManagerHomeState extends State<HotelManagerHome> {
             ),
           ),
           SectionHeader(title: t('section_upcoming_trips')),
-          if (activeTrips.isEmpty)
+          if (topTrips.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Text(t('no_trips_yet'), style: const TextStyle(color: AppColors.textSecondary)),
@@ -72,17 +79,21 @@ class _HotelManagerHomeState extends State<HotelManagerHome> {
               margin: const EdgeInsets.symmetric(horizontal: 18),
               child: Column(
                 children: [
-                  for (var i = 0; i < activeTrips.length; i++) ...[
+                  for (var i = 0; i < topTrips.length; i++) ...[
                     if (i > 0) const Divider(height: 21, thickness: 1, color: AppColors.border),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: InfoRow(
-                        leading: const InitialsAvatar(initials: '🌙', size: 32),
-                        title: activeTrips[i].title,
-                        subtitle: activeTrips[i].hotelName ?? t('no_hotel_assigned'),
+                        leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: topTrips[i].thumbnail),
+                        title: topTrips[i].title,
+                        subtitle: totalCountFor(topTrips[i].id) == 0
+                            ? t('no_hotel_assigned')
+                            : waitingCountFor(topTrips[i].id) == 0
+                                ? t('all_housed')
+                                : '${waitingCountFor(topTrips[i].id)} ${t('stat_waiting_housing')}',
                         trailing: const ForwardChevron(),
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => RoomAssignScreen(trip: activeTrips[i])),
+                          MaterialPageRoute(builder: (_) => RoomAssignScreen(trip: topTrips[i])),
                         ),
                       ),
                     ),

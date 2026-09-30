@@ -40,6 +40,21 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
     if (result == true && mounted) setState(() => selected.clear());
   }
 
+  Future<void> _editGroup(List<Map<String, dynamic>> occupants) async {
+    final first = occupants.first;
+    await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => _RoomDetailsSheet(
+        selectedBookings: occupants,
+        initialHotelId: first['hotel_id'] as int?,
+        initialRoomNumber: first['room_number'] as String?,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -73,7 +88,8 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
                       if (assignedByRoom.isEmpty)
                         Text(t('no_rooms_yet'), style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted))
                       else
-                        for (final entry in assignedByRoom.entries) _RoomCard(occupants: entry.value),
+                        for (final entry in assignedByRoom.entries)
+                          _RoomCard(occupants: entry.value, onTap: () => _editGroup(entry.value)),
                     ],
                   ),
                 ),
@@ -151,7 +167,9 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
 
 class _RoomDetailsSheet extends StatefulWidget {
   final List<Map<String, dynamic>> selectedBookings;
-  const _RoomDetailsSheet({required this.selectedBookings});
+  final int? initialHotelId;
+  final String? initialRoomNumber;
+  const _RoomDetailsSheet({required this.selectedBookings, this.initialHotelId, this.initialRoomNumber});
 
   @override
   State<_RoomDetailsSheet> createState() => _RoomDetailsSheetState();
@@ -159,9 +177,15 @@ class _RoomDetailsSheet extends StatefulWidget {
 
 class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
   int? hotelId;
-  final roomCtrl = TextEditingController();
+  late final roomCtrl = TextEditingController(text: widget.initialRoomNumber ?? '');
   bool saving = false;
   String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    hotelId = widget.initialHotelId;
+  }
 
   @override
   void dispose() {
@@ -170,8 +194,8 @@ class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
   }
 
   Future<void> _save() async {
-    if (hotelId == null || roomCtrl.text.trim().isEmpty) {
-      setState(() => error = 'الرجاء اختيار الفندق ورقم الغرفة');
+    if (hotelId == null) {
+      setState(() => error = context.read<AppState>().t('err_select_hotel'));
       return;
     }
     setState(() {
@@ -180,10 +204,11 @@ class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
     });
 
     final ids = widget.selectedBookings.map((b) => b['id'] as int).toList();
+    final roomNumber = roomCtrl.text.trim();
     final result = await context.read<AppState>().assignBookingHotel(
           bookingId: ids.first,
           hotelId: hotelId!,
-          roomNumber: roomCtrl.text.trim(),
+          roomNumber: roomNumber.isEmpty ? null : roomNumber,
           roomCapacity: ids.length,
           companionIds: ids.skip(1).toList(),
         );
@@ -231,7 +256,7 @@ class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
               onChanged: (v) => setState(() => hotelId = v),
             ),
             const SizedBox(height: 14),
-            TextField(controller: roomCtrl, decoration: InputDecoration(labelText: t('field_room_number'))),
+            TextField(controller: roomCtrl, decoration: InputDecoration(labelText: t('field_room_number_optional'))),
             if (error != null) ...[
               const SizedBox(height: 8),
               Text(error!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
@@ -252,22 +277,42 @@ class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
 
 class _RoomCard extends StatelessWidget {
   final List<Map<String, dynamic>> occupants;
-  const _RoomCard({required this.occupants});
+  final VoidCallback onTap;
+  const _RoomCard({required this.occupants, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final t = context.watch<AppState>().t;
     final first = occupants.first;
     final capacity = first['room_capacity'] ?? occupants.length;
+    final hotelName = (first['hotel'] as Map<String, dynamic>?)?['name'] as String? ?? '—';
+    final roomNumber = first['room_number'] as String?;
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Column(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${t('room_word')} ${first['room_number']}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(hotelName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(
+                      roomNumber != null ? '${t('room_word')} $roomNumber' : t('room_pending_number'),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: roomNumber != null ? AppColors.textSecondary : AppColors.accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               StatusPill.success('${occupants.length} / $capacity'),
             ],
           ),
@@ -286,6 +331,7 @@ class _RoomCard extends StatelessWidget {
               ],
             ),
         ],
+        ),
       ),
     );
   }

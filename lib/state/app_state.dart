@@ -1,8 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_strings.dart';
 import '../models/models.dart';
 import '../services/api_client.dart';
+import '../services/live_updates.dart';
+import '../services/push_service.dart';
 
 /// حالة التطبيق العامة: الدور الحالي، بيانات البرامج التجريبية،
 /// تعيينات الباصات، الغرف، والحضور والغياب.
@@ -10,6 +13,53 @@ import '../services/api_client.dart';
 class AppState extends ChangeNotifier {
   final ApiClient _api = ApiClient();
   static const _tokenPrefsKey = 'provider_api_token';
+
+  AppState() {
+    LiveUpdates.instance.stream.listen((_) => refreshLive());
+  }
+
+  bool _notifyQueued = false;
+
+  /// كل الشاشات بتنادي fetchXxx() من initState، ودي بتعمل notifyListeners()
+  /// فورًا وFlutter لسه في نص بناء الشاشة. في نسخة الـ release ده بيسيب
+  /// الـ Provider "متعلّم إنه محتاج يتبني" من غير ما يتبني فعلًا، فأي تحديث
+  /// بعد كده (وصول البيانات) مابيوصلش للشاشة والـ loading بيفضل للأبد.
+  /// الحل: لو الإشعار جه أثناء البناء، نأجّله لآخر الفريم.
+  @override
+  void notifyListeners() {
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      if (_notifyQueued) return;
+      _notifyQueued = true;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _notifyQueued = false;
+        super.notifyListeners();
+      });
+      return;
+    }
+    super.notifyListeners();
+  }
+
+  bool _liveRefreshing = false;
+
+  /// تحديث في اللحظة (من غير رفرش): بيعيد تحميل البيانات اللي الشاشات
+  /// معروضة بيها بالفعل — الحجوزات والرحلات والرئيسية والإشعارات — وكل
+  /// شاشة بتـ watch الـ AppState بتتحدّث لوحدها. بيتنادى من [LiveUpdates]
+  /// (إشعار وصل، التطبيق رجع من الخلفية، أو التحديث الاحتياطي الدوري).
+  Future<void> refreshLive() async {
+    if (!isLoggedIn || _liveRefreshing) return;
+    _liveRefreshing = true;
+    try {
+      await Future.wait(<Future<void>>[
+        fetchUnreadNotificationsCount(),
+        if (dashboardData != null) fetchDashboard(),
+        if (apiTrips.isNotEmpty) fetchApiTrips(),
+        if (bookingsData != null) fetchBookings(),
+        if (notifications.isNotEmpty) fetchNotifications(),
+      ].map((f) => f.then<void>((_) {}, onError: (_) {})));
+    } finally {
+      _liveRefreshing = false;
+    }
+  }
 
   Set<UserRole> currentRoles = {UserRole.owner};
 
@@ -77,6 +127,7 @@ class AppState extends ChangeNotifier {
       final account = await _api.get('/me') as Map<String, dynamic>;
       _applyAccountPayload(account);
       isLoggedIn = true;
+      _registerPush();
     } catch (_) {
       await prefs.remove(_tokenPrefsKey);
       _api.setToken(null);
@@ -104,6 +155,7 @@ class AppState extends ChangeNotifier {
       _applyAccountPayload(account);
       isLoggedIn = true;
       notifyListeners();
+      _registerPush();
       return null;
     } on ApiException catch (e) {
       return e.message;
@@ -112,7 +164,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// يسجّل توكن الجهاز على السيرفر عشان توصل إشعارات الحجوزات للهاتف.
+  void _registerPush() {
+    PushService.instance.register(
+      (token) => _api.post('/device-tokens', {
+        'token': token,
+        'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
+        'locale': language.localeCode,
+      }),
+    );
+  }
+
   Future<void> logout() async {
+    await PushService.instance.unregister((token) => _api.delete('/device-tokens', {'token': token}));
     try {
       await _api.post('/logout');
     } catch (_) {

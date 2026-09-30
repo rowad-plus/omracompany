@@ -164,7 +164,7 @@ class _BranchSheetState extends State<_BranchSheet> {
 
   Future<void> _save() async {
     if (nameCtrl.text.trim().isEmpty) {
-      setState(() => error = 'الرجاء إدخال اسم الفرع');
+      setState(() => error = context.read<AppState>().t('err_branch_name_required'));
       return;
     }
     setState(() {

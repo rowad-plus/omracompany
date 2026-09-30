@@ -139,7 +139,7 @@ class _AddTravelerSheetState extends State<_AddTravelerSheet> {
 
   Future<void> _save() async {
     if (nameCtrl.text.trim().isEmpty || phoneCtrl.text.trim().isEmpty) {
-      setState(() => error = 'الرجاء إدخال الاسم ورقم الجوال');
+      setState(() => error = context.read<AppState>().t('err_name_phone_required'));
       return;
     }
     setState(() {

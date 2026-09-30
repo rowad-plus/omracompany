@@ -215,11 +215,11 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
 
   Future<void> _save() async {
     if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty || roleId == null) {
-      setState(() => error = 'الرجاء إدخال الاسم والبريد الإلكتروني واختيار الدور');
+      setState(() => error = context.read<AppState>().t('err_user_fields_required'));
       return;
     }
     if (!isEdit && passwordCtrl.text.length < 8) {
-      setState(() => error = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+      setState(() => error = context.read<AppState>().t('err_password_min_length'));
       return;
     }
 
@@ -479,7 +479,7 @@ class _RoleSheetState extends State<_RoleSheet> {
 
   Future<void> _save() async {
     if (nameCtrl.text.trim().isEmpty) {
-      setState(() => error = 'اسم الدور مطلوب');
+      setState(() => error = context.read<AppState>().t('err_role_name_required'));
       return;
     }
 
