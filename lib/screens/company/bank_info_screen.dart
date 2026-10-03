@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 
 class BankInfoScreen extends StatefulWidget {
-  const BankInfoScreen({super.key});
+  /// اتفتحت من نافذة الإلزام في RootShell — ترجع تلقائيًا بعد الحفظ.
+  final bool fromPrompt;
+  const BankInfoScreen({super.key, this.fromPrompt = false});
 
   @override
   State<BankInfoScreen> createState() => _BankInfoScreenState();
@@ -42,18 +45,26 @@ class _BankInfoScreenState extends State<BankInfoScreen> {
       return;
     }
     final t = context.read<AppState>().t;
+    final iban = BankInfo.normalizeIban(ibanCtrl.text);
+    if (!BankInfo.isValidIban(iban)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('iban_invalid'))));
+      return;
+    }
+    ibanCtrl.text = iban;
     setState(() => saving = true);
     final result = await context.read<AppState>().updateBankInfo(
           bankName: bankNameCtrl.text.trim(),
           bankAccountHolder: holderCtrl.text.trim(),
           bankAccountNumber: numberCtrl.text.trim(),
-          bankIban: ibanCtrl.text.trim(),
+          bankIban: iban,
         );
     if (!mounted) return;
     setState(() => saving = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(result ?? t('bank_info_saved_snackbar'))),
     );
+    // لما الصفحة اتفتحت من نافذة "لازم تدخل الآيبان" نرجّع بعد الحفظ الناجح.
+    if (result == null && widget.fromPrompt) Navigator.of(context).pop(true);
   }
 
   @override
@@ -82,7 +93,12 @@ class _BankInfoScreenState extends State<BankInfoScreen> {
                 const SizedBox(height: 14),
                 TextField(controller: numberCtrl, decoration: InputDecoration(labelText: t('field_bank_account_number'))),
                 const SizedBox(height: 14),
-                TextField(controller: ibanCtrl, decoration: InputDecoration(labelText: t('field_bank_iban'))),
+                TextField(
+                  controller: ibanCtrl,
+                  textCapitalization: TextCapitalization.characters,
+                  textDirection: TextDirection.ltr,
+                  decoration: InputDecoration(labelText: t('field_bank_iban'), hintText: 'SA00 0000 0000 0000 0000 0000'),
+                ),
                 const SizedBox(height: 18),
                 ElevatedButton(
                   onPressed: saving ? null : _save,

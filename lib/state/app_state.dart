@@ -12,6 +12,9 @@ import '../services/push_service.dart';
 /// (بديل الـ localStorage/متغيرات JS اللي كنا مستخدمينها في نسخة الويب)
 class AppState extends ChangeNotifier {
   final ApiClient _api = ApiClient();
+
+  /// للشاشات اللي بتدير حالتها بنفسها (الرصيد، التذاكر).
+  ApiClient get api => _api;
   static const _tokenPrefsKey = 'provider_api_token';
 
   AppState() {
@@ -79,6 +82,7 @@ class AppState extends ChangeNotifier {
 
   String accountName = '';
   String accountEmail = '';
+  String accountPhone = '';
   String? companyName;
   String? companyLogo;
   Set<String> permissions = {};
@@ -104,6 +108,7 @@ class AppState extends ChangeNotifier {
   void _applyAccountPayload(Map<String, dynamic> account) {
     accountName = account['name'] as String? ?? '';
     accountEmail = account['email'] as String? ?? '';
+    accountPhone = account['phone'] as String? ?? '';
     final company = account['company'] as Map<String, dynamic>?;
     companyName = company?['name'] as String?;
     companyLogo = company?['logo'] as String?;
@@ -189,8 +194,10 @@ class AppState extends ChangeNotifier {
     isLoggedIn = false;
     accountName = '';
     accountEmail = '';
+    accountPhone = '';
     companyName = null;
     companyLogo = null;
+    bankInfo = null;
     permissions = {};
     employees = [];
     companyRoles = [];
@@ -995,6 +1002,7 @@ class AppState extends ChangeNotifier {
         'phone': phone,
       }) as Map<String, dynamic>;
       companyInfo = CompanyInfo.fromJson(res['company'] as Map<String, dynamic>);
+      companyName = companyInfo!.name;
       notifyListeners();
       return null;
     } on ApiException catch (e) {
@@ -1147,6 +1155,22 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// تعديل بيانات الحساب الشخصي (الاسم/البريد/الجوال) — PUT /profile.
+  Future<String?> updateProfile({required String name, required String email, String? phone}) async {
+    try {
+      await _api.put('/profile', {'name': name, 'email': email, 'phone': phone});
+      accountName = name;
+      accountEmail = email;
+      accountPhone = phone ?? '';
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر حفظ بيانات الحساب';
+    }
+  }
+
   Future<String?> changePassword({required String currentPassword, required String newPassword}) async {
     try {
       await _api.put('/profile/password', {
@@ -1166,6 +1190,7 @@ class AppState extends ChangeNotifier {
     try {
       final res = await _api.postMultipart('/company/logo', {}, files: [MapEntry('logo', bytes)]) as Map<String, dynamic>;
       final url = res['url'] as String?;
+      if (url != null) companyLogo = url;
       if (url != null && companyInfo != null) {
         companyInfo = CompanyInfo(
           id: companyInfo!.id,

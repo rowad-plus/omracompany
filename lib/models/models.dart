@@ -546,6 +546,27 @@ class BankInfo {
         bankAccountNumber: j['bank_account_number'] as String?,
         bankIban: j['bank_iban'] as String?,
       );
+
+  bool get hasValidIban => isValidIban(bankIban);
+
+  static String normalizeIban(String? v) => (v ?? '').replaceAll(RegExp(r'\s+'), '').toUpperCase();
+
+  /// تحقق IBAN القياسي (ISO 13616): حرفين دولة + رقمين تحقق + الحساب، و mod 97 = 1.
+  /// IBAN السعودي لازم يكون SA + 22 رقم/حرف (24 خانة).
+  static bool isValidIban(String? value) {
+    final iban = normalizeIban(value);
+    if (!RegExp(r'^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$').hasMatch(iban)) return false;
+    if (iban.startsWith('SA') && iban.length != 24) return false;
+    final rearranged = iban.substring(4) + iban.substring(0, 4);
+    var rem = 0;
+    for (final ch in rearranged.codeUnits) {
+      final digits = ch >= 65 ? '${ch - 55}' : String.fromCharCode(ch);
+      for (final d in digits.codeUnits) {
+        rem = (rem * 10 + (d - 48)) % 97;
+      }
+    }
+    return rem == 1;
+  }
 }
 
 /// فرع للشركة (Backend حقيقي).

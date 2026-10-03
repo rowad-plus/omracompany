@@ -10,6 +10,8 @@ import 'theme/system_bars.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/root_shell.dart';
 import 'screens/notifications/notifications_screen.dart';
+import 'screens/wallet/tickets_screen.dart';
+import 'screens/wallet/wallet_screen.dart';
 import 'services/live_updates.dart';
 import 'services/push_service.dart';
 
@@ -78,12 +80,13 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    _pushTapSub = PushService.instance.onTap.listen((_) => _openNotifications());
+    _pushTapSub = PushService.instance.onTap.listen(_openNotifications);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await context.read<AppState>().restoreSession();
-      if (PushService.instance.pendingLaunchTap != null) {
+      final launch = PushService.instance.pendingLaunchTap;
+      if (launch != null) {
         PushService.instance.pendingLaunchTap = null;
-        _openNotifications();
+        _openNotifications(launch);
       }
     });
   }
@@ -94,11 +97,19 @@ class _AuthGateState extends State<AuthGate> {
     super.dispose();
   }
 
-  /// أي إشعار (حجز جديد، إلغاء، دفع، تسكين...) بيفتح شاشة الإشعارات.
-  void _openNotifications() {
+  /// إشعار رد على تذكرة بيفتح التذكرة، وإشعار تحويل بيفتح الرصيد؛ أي إشعار
+  /// تاني (حجز جديد، إلغاء، دفع، تسكين...) بيفتح شاشة الإشعارات.
+  void _openNotifications([Map<String, dynamic>? data]) {
     final state = context.read<AppState>();
     if (!state.isLoggedIn) return;
-    navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+    final type = '${data?['type'] ?? ''}';
+    final ticketId = int.tryParse('${data?['ticket_id'] ?? ''}');
+    final Widget screen = type.startsWith('ticket.') && ticketId != null
+        ? TicketDetailScreen(ticketId: ticketId)
+        : type.startsWith('wallet.')
+            ? const WalletScreen()
+            : const NotificationsScreen();
+    navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => screen));
     state.fetchUnreadNotificationsCount();
   }
 

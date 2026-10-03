@@ -12,6 +12,7 @@ import 'hotel_manager/hotel_manager_trips.dart';
 import 'bus_supervisor/bus_supervisor_home.dart';
 import 'bus_supervisor/bus_supervisor_trips.dart';
 import 'profile/profile_screen.dart';
+import 'company/bank_info_screen.dart';
 
 /// الحاوية الرئيسية بعد تسجيل الدخول — تبني شريط تنقل مختلف حسب دور المستخدم،
 /// بنفس منطق goHome()/goToProgramsTab() من نسخة الويب.
@@ -64,6 +65,53 @@ class _RootShellState extends State<RootShell> {
     return tabs;
   }
 
+  bool _ibanPromptOpen = false;
+
+  /// مالك الشركة لازم يكون مدخل IBAN صحيح عشان نقدر نحوّل له مستحقاته —
+  /// لو مش موجود (أو غلط) بتظهر نافذة ما تتقفلش إلا بالذهاب لصفحة الحساب
+  /// البنكي، وبتظهر تاني لو رجع من غير ما يحفظ IBAN صحيح.
+  Future<void> _requireIban() async {
+    if (_ibanPromptOpen || !mounted) return;
+    final state = context.read<AppState>();
+    if (!state.currentRoles.contains(UserRole.owner)) return;
+    try {
+      await state.fetchBankInfo();
+    } catch (_) {
+      return; // شبكة/سيرفر — ما نقفلش التطبيق على المستخدم بسبب خطأ اتصال.
+    }
+    if (!mounted || state.bankInfo == null || state.bankInfo!.hasValidIban) return;
+
+    _ibanPromptOpen = true;
+    final t = state.t;
+    final hasSomething = (state.bankInfo!.bankIban ?? '').trim().isNotEmpty;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          icon: const Icon(Icons.account_balance_outlined, color: AppColors.primary, size: 36),
+          title: Text(t('iban_required_title'), textAlign: TextAlign.center),
+          content: Text(t(hasSomething ? 'iban_invalid_body' : 'iban_required_body'), textAlign: TextAlign.center),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(ctx).pop(),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: Text(t('iban_required_action')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BankInfoScreen(fromPrompt: true)));
+    _ibanPromptOpen = false;
+    if (!mounted) return;
+    final b = context.read<AppState>().bankInfo;
+    if (b == null || !b.hasValidIban) _requireIban();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -72,6 +120,9 @@ class _RootShellState extends State<RootShell> {
       // رجّع لأول تبويب لما تتغيّر الأدوار (بعد تسجيل الدخول من جديد).
       lastRoles = roles;
       index = 0;
+      if (roles.contains(UserRole.owner)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _requireIban());
+      }
     }
     final tabs = _tabsFor(roles, state);
     final safeIndex = index.clamp(0, tabs.length - 1);
