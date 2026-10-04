@@ -443,6 +443,139 @@ class AppStrings {
       AppLanguage.ar: 'اليوم', AppLanguage.en: 'Today', AppLanguage.fr: "Aujourd'hui", AppLanguage.tr: 'Bugün',
       AppLanguage.ur: 'آج', AppLanguage.id: 'Hari ini', AppLanguage.ms: 'Hari ini',
     },
+    'program_edit_text': {
+      AppLanguage.ar: 'تعديل وصف البرنامج', AppLanguage.en: 'Edit program text', AppLanguage.fr: 'Modifier le programme',
+      AppLanguage.tr: 'Program metnini düzenle', AppLanguage.ur: 'پروگرام کی تفصیل میں ترمیم',
+      AppLanguage.id: 'Ubah teks program', AppLanguage.ms: 'Sunting teks program',
+    },
+    'activity_add': {
+      AppLanguage.ar: 'إضافة موعد', AppLanguage.en: 'Add item', AppLanguage.fr: 'Ajouter', AppLanguage.tr: 'Ekle',
+      AppLanguage.ur: 'شامل کریں', AppLanguage.id: 'Tambah', AppLanguage.ms: 'Tambah',
+    },
+    'activity_edit': {
+      AppLanguage.ar: 'تعديل الموعد', AppLanguage.en: 'Edit item', AppLanguage.fr: 'Modifier', AppLanguage.tr: 'Düzenle',
+      AppLanguage.ur: 'ترمیم کریں', AppLanguage.id: 'Ubah', AppLanguage.ms: 'Sunting',
+    },
+    'activity_next': {
+      AppLanguage.ar: 'التالي', AppLanguage.en: 'Next', AppLanguage.fr: 'Suivant', AppLanguage.tr: 'Sıradaki',
+      AppLanguage.ur: 'اگلا', AppLanguage.id: 'Berikutnya', AppLanguage.ms: 'Seterusnya',
+    },
+    'activity_type': {
+      AppLanguage.ar: 'النوع', AppLanguage.en: 'Type', AppLanguage.fr: 'Type', AppLanguage.tr: 'Tür',
+      AppLanguage.ur: 'قسم', AppLanguage.id: 'Jenis', AppLanguage.ms: 'Jenis',
+    },
+    'activity_type_departure': {
+      AppLanguage.ar: 'الانطلاق', AppLanguage.en: 'Departure', AppLanguage.fr: 'Départ', AppLanguage.tr: 'Hareket',
+      AppLanguage.ur: 'روانگی', AppLanguage.id: 'Keberangkatan', AppLanguage.ms: 'Berlepas',
+    },
+    'activity_type_ziyara': {
+      AppLanguage.ar: 'مزار', AppLanguage.en: 'Ziyarah', AppLanguage.fr: 'Ziyara', AppLanguage.tr: 'Ziyaret',
+      AppLanguage.ur: 'زیارت', AppLanguage.id: 'Ziarah', AppLanguage.ms: 'Ziarah',
+    },
+    'activity_type_transfer': {
+      AppLanguage.ar: 'تنقّل', AppLanguage.en: 'Transfer', AppLanguage.fr: 'Transfert', AppLanguage.tr: 'Transfer',
+      AppLanguage.ur: 'منتقلی', AppLanguage.id: 'Transfer', AppLanguage.ms: 'Pemindahan',
+    },
+    'activity_type_arrival': {
+      AppLanguage.ar: 'الوصول والتسكين', AppLanguage.en: 'Arrival & check-in', AppLanguage.fr: 'Arrivée',
+      AppLanguage.tr: 'Varış ve giriş', AppLanguage.ur: 'آمد اور رہائش', AppLanguage.id: 'Tiba & check-in',
+      AppLanguage.ms: 'Ketibaan & daftar masuk',
+    },
+    'activity_type_return': {
+      AppLanguage.ar: 'العودة', AppLanguage.en: 'Return', AppLanguage.fr: 'Retour', AppLanguage.tr: 'Dönüş',
+      AppLanguage.ur: 'واپسی', AppLanguage.id: 'Kepulangan', AppLanguage.ms: 'Pulang',
+    },
+    'activity_type_other': {
+      AppLanguage.ar: 'أخرى', AppLanguage.en: 'Other', AppLanguage.fr: 'Autre', AppLanguage.tr: 'Diğer',
+      AppLanguage.ur: 'دیگر', AppLanguage.id: 'Lainnya', AppLanguage.ms: 'Lain-lain',
+    },
+    'activity_time': {
+      AppLanguage.ar: 'الساعة', AppLanguage.en: 'Time', AppLanguage.fr: 'Heure', AppLanguage.tr: 'Saat',
+      AppLanguage.ur: 'وقت', AppLanguage.id: 'Jam', AppLanguage.ms: 'Masa',
+    },
+    'activity_pick_time': {
+      AppLanguage.ar: 'اختر الساعة', AppLanguage.en: 'Pick time', AppLanguage.fr: "Choisir l'heure",
+      AppLanguage.tr: 'Saat seç', AppLanguage.ur: 'وقت منتخب کریں', AppLanguage.id: 'Pilih jam', AppLanguage.ms: 'Pilih masa',
+    },
+    'activity_place': {
+      AppLanguage.ar: 'المكان', AppLanguage.en: 'Place', AppLanguage.fr: 'Lieu', AppLanguage.tr: 'Yer',
+      AppLanguage.ur: 'جگہ', AppLanguage.id: 'Tempat', AppLanguage.ms: 'Tempat',
+    },
+    'activity_place_hint': {
+      AppLanguage.ar: 'مثال: أمام الفندق', AppLanguage.en: 'e.g. Hotel entrance', AppLanguage.fr: "ex. Entrée de l'hôtel",
+      AppLanguage.tr: 'ör. Otel girişi', AppLanguage.ur: 'مثلاً ہوٹل کے سامنے', AppLanguage.id: 'mis. Depan hotel',
+      AppLanguage.ms: 'cth. Depan hotel',
+    },
+    'activity_ziyara_name': {
+      AppLanguage.ar: 'اسم المزار', AppLanguage.en: 'Ziyarah name', AppLanguage.fr: 'Nom du lieu de visite',
+      AppLanguage.tr: 'Ziyaret yeri', AppLanguage.ur: 'زیارت کا نام', AppLanguage.id: 'Nama tempat ziarah',
+      AppLanguage.ms: 'Nama tempat ziarah',
+    },
+    'activity_ziyara_hint': {
+      AppLanguage.ar: 'مثال: جبل أحد', AppLanguage.en: 'e.g. Mount Uhud', AppLanguage.fr: 'ex. Mont Uhud',
+      AppLanguage.tr: 'ör. Uhud Dağı', AppLanguage.ur: 'مثلاً جبل احد', AppLanguage.id: 'mis. Jabal Uhud',
+      AppLanguage.ms: 'cth. Jabal Uhud',
+    },
+    'activity_bus': {
+      AppLanguage.ar: 'الباص', AppLanguage.en: 'Bus', AppLanguage.fr: 'Bus', AppLanguage.tr: 'Otobüs',
+      AppLanguage.ur: 'بس', AppLanguage.id: 'Bus', AppLanguage.ms: 'Bas',
+    },
+    'activity_no_bus': {
+      AppLanguage.ar: 'بدون باص', AppLanguage.en: 'No bus', AppLanguage.fr: 'Sans bus', AppLanguage.tr: 'Otobüs yok',
+      AppLanguage.ur: 'بس کے بغیر', AppLanguage.id: 'Tanpa bus', AppLanguage.ms: 'Tiada bas',
+    },
+    'activity_bus_other': {
+      AppLanguage.ar: 'باص آخر (اكتب الاسم)', AppLanguage.en: 'Other bus (type name)', AppLanguage.fr: 'Autre bus',
+      AppLanguage.tr: 'Başka otobüs', AppLanguage.ur: 'دوسری بس', AppLanguage.id: 'Bus lain', AppLanguage.ms: 'Bas lain',
+    },
+    'activity_bus_name_hint': {
+      AppLanguage.ar: 'رقم أو اسم الباص', AppLanguage.en: 'Bus number or name', AppLanguage.fr: 'Numéro ou nom du bus',
+      AppLanguage.tr: 'Otobüs numarası veya adı', AppLanguage.ur: 'بس کا نمبر یا نام', AppLanguage.id: 'Nomor atau nama bus',
+      AppLanguage.ms: 'Nombor atau nama bas',
+    },
+    'activity_no_trip_buses': {
+      AppLanguage.ar: 'لا توجد باصات معيّنة لهذه الرحلة — عيّنها من "تعيين الباصات" أو اكتب اسم الباص',
+      AppLanguage.en: 'No buses assigned to this trip — assign them or type a bus name',
+      AppLanguage.fr: 'Aucun bus assigné — assignez-en ou saisissez un nom',
+      AppLanguage.tr: 'Bu seyahate otobüs atanmadı — atayın veya ad yazın',
+      AppLanguage.ur: 'اس سفر کے لیے کوئی بس مقرر نہیں — مقرر کریں یا نام لکھیں',
+      AppLanguage.id: 'Belum ada bus — tetapkan atau ketik nama bus',
+      AppLanguage.ms: 'Tiada bas ditetapkan — tetapkan atau taip nama bas',
+    },
+    'activity_notes': {
+      AppLanguage.ar: 'ملاحظات', AppLanguage.en: 'Notes', AppLanguage.fr: 'Notes', AppLanguage.tr: 'Notlar',
+      AppLanguage.ur: 'نوٹس', AppLanguage.id: 'Catatan', AppLanguage.ms: 'Nota',
+    },
+    'activity_notes_hint': {
+      AppLanguage.ar: 'اختياري', AppLanguage.en: 'Optional', AppLanguage.fr: 'Facultatif', AppLanguage.tr: 'İsteğe bağlı',
+      AppLanguage.ur: 'اختیاری', AppLanguage.id: 'Opsional', AppLanguage.ms: 'Pilihan',
+    },
+    'activity_saved': {
+      AppLanguage.ar: 'تم الحفظ', AppLanguage.en: 'Saved', AppLanguage.fr: 'Enregistré', AppLanguage.tr: 'Kaydedildi',
+      AppLanguage.ur: 'محفوظ ہو گیا', AppLanguage.id: 'Tersimpan', AppLanguage.ms: 'Disimpan',
+    },
+    'activity_save_failed': {
+      AppLanguage.ar: 'تعذّر الحفظ، حاول مرة أخرى', AppLanguage.en: 'Could not save, try again',
+      AppLanguage.fr: "Échec de l'enregistrement", AppLanguage.tr: 'Kaydedilemedi', AppLanguage.ur: 'محفوظ نہیں ہو سکا',
+      AppLanguage.id: 'Gagal menyimpan', AppLanguage.ms: 'Gagal menyimpan',
+    },
+    'activity_load_failed': {
+      AppLanguage.ar: 'تعذّر تحميل مواعيد البرنامج', AppLanguage.en: 'Could not load the schedule',
+      AppLanguage.fr: 'Impossible de charger le programme', AppLanguage.tr: 'Program yüklenemedi',
+      AppLanguage.ur: 'شیڈول لوڈ نہیں ہو سکا', AppLanguage.id: 'Gagal memuat jadwal', AppLanguage.ms: 'Gagal memuatkan jadual',
+    },
+    'activity_delete_confirm': {
+      AppLanguage.ar: 'حذف هذا الموعد؟', AppLanguage.en: 'Delete this item?', AppLanguage.fr: 'Supprimer ?',
+      AppLanguage.tr: 'Silinsin mi?', AppLanguage.ur: 'حذف کریں؟', AppLanguage.id: 'Hapus?', AppLanguage.ms: 'Padam?',
+    },
+    'time_am': {
+      AppLanguage.ar: 'ص', AppLanguage.en: 'AM', AppLanguage.fr: 'AM', AppLanguage.tr: 'ÖÖ', AppLanguage.ur: 'صبح',
+      AppLanguage.id: 'AM', AppLanguage.ms: 'PG',
+    },
+    'time_pm': {
+      AppLanguage.ar: 'م', AppLanguage.en: 'PM', AppLanguage.fr: 'PM', AppLanguage.tr: 'ÖS', AppLanguage.ur: 'شام',
+      AppLanguage.id: 'PM', AppLanguage.ms: 'PTG',
+    },
     'section_latest_notifications': {
       AppLanguage.ar: 'أحدث الإشعارات', AppLanguage.en: 'Latest notifications', AppLanguage.fr: 'Dernières notifications',
       AppLanguage.tr: 'Son bildirimler', AppLanguage.ur: 'تازہ ترین اطلاعات',

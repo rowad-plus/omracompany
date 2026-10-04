@@ -23,6 +23,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   late ApiTrip trip = widget.trip;
   bool busy = false;
   Map<String, dynamic>? editData;
+  Map<String, dynamic>? activitiesData;
   bool programLoading = true;
 
   @override
@@ -33,10 +34,12 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   Future<void> _loadProgram() async {
     setState(() => programLoading = true);
-    final data = await context.read<AppState>().fetchTripEditData(trip.id);
+    final state = context.read<AppState>();
+    final results = await Future.wait([state.fetchTripEditData(trip.id), state.fetchTripActivities(trip.id)]);
     if (!mounted) return;
     setState(() {
-      editData = data ?? editData;
+      editData = results[0] ?? editData;
+      activitiesData = results[1] ?? activitiesData;
       programLoading = false;
     });
   }
@@ -155,13 +158,19 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           const SizedBox(height: 12),
           TripProgramBanner(
             data: editData,
+            activitiesData: activitiesData,
             loading: programLoading,
-            onDefine: _editProgram,
-            onOpen: () {
+            onOpen: () async {
               if (editData == null) return;
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => TripProgramScreen(title: trip.title, data: editData!, onEdit: _editProgram),
+              await Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => TripProgramScreen(
+                  tripId: trip.id,
+                  title: trip.title,
+                  data: editData!,
+                  onEditText: _editProgram,
+                ),
               ));
+              if (mounted) _loadProgram();
             },
           ),
           const SizedBox(height: 12),
