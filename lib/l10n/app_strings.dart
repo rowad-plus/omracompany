@@ -397,6 +397,52 @@ class AppStrings {
       AppLanguage.tr: '{n} günün {d}. günü', AppLanguage.ur: '{n} میں سے دن {d}', AppLanguage.id: 'Hari {d} dari {n}',
       AppLanguage.ms: 'Hari {d} daripada {n}',
     },
+    'trip_pilgrims': {
+      AppLanguage.ar: 'المعتمرين', AppLanguage.en: 'Pilgrims', AppLanguage.fr: 'Pèlerins',
+      AppLanguage.tr: 'Hacı adayları', AppLanguage.ur: 'معتمرین', AppLanguage.id: 'Jamaah',
+      AppLanguage.ms: 'Jemaah',
+    },
+    'unit_bus': {
+      AppLanguage.ar: 'باص', AppLanguage.en: 'bus(es)', AppLanguage.fr: 'bus', AppLanguage.tr: 'otobüs',
+      AppLanguage.ur: 'بس', AppLanguage.id: 'bus', AppLanguage.ms: 'bas',
+    },
+    'program_banner_title': {
+      AppLanguage.ar: 'برنامج الرحلة', AppLanguage.en: 'Trip program', AppLanguage.fr: 'Programme du voyage',
+      AppLanguage.tr: 'Seyahat programı', AppLanguage.ur: 'سفر کا پروگرام', AppLanguage.id: 'Program perjalanan',
+      AppLanguage.ms: 'Program perjalanan',
+    },
+    'program_not_defined': {
+      AppLanguage.ar: 'لم يتم تحديد البرنامج بعد', AppLanguage.en: 'No program set yet',
+      AppLanguage.fr: 'Aucun programme défini', AppLanguage.tr: 'Henüz program belirlenmedi',
+      AppLanguage.ur: 'ابھی پروگرام طے نہیں ہوا', AppLanguage.id: 'Program belum ditentukan',
+      AppLanguage.ms: 'Program belum ditetapkan',
+    },
+    'program_define_hint': {
+      AppLanguage.ar: 'حدد أيام الرحلة وأنشطة كل يوم لتتابع سيرها يومًا بيوم',
+      AppLanguage.en: 'Set the trip days and each day\'s activities to track it day by day',
+      AppLanguage.fr: 'Définissez les jours et activités pour suivre le voyage jour par jour',
+      AppLanguage.tr: 'Seyahati gün gün takip etmek için günleri ve etkinlikleri belirleyin',
+      AppLanguage.ur: 'سفر کو دن بہ دن ٹریک کرنے کے لیے دن اور سرگرمیاں طے کریں',
+      AppLanguage.id: 'Atur hari dan kegiatan untuk memantau perjalanan hari demi hari',
+      AppLanguage.ms: 'Tetapkan hari dan aktiviti untuk menjejak perjalanan hari demi hari',
+    },
+    'program_define': {
+      AppLanguage.ar: 'تحديد البرنامج', AppLanguage.en: 'Set program', AppLanguage.fr: 'Définir',
+      AppLanguage.tr: 'Program belirle', AppLanguage.ur: 'پروگرام طے کریں', AppLanguage.id: 'Atur program',
+      AppLanguage.ms: 'Tetapkan program',
+    },
+    'program_view': {
+      AppLanguage.ar: 'تتبّع', AppLanguage.en: 'Track', AppLanguage.fr: 'Suivre', AppLanguage.tr: 'Takip et',
+      AppLanguage.ur: 'ٹریک کریں', AppLanguage.id: 'Lacak', AppLanguage.ms: 'Jejak',
+    },
+    'program_day': {
+      AppLanguage.ar: 'اليوم', AppLanguage.en: 'Day', AppLanguage.fr: 'Jour', AppLanguage.tr: 'Gün',
+      AppLanguage.ur: 'دن', AppLanguage.id: 'Hari', AppLanguage.ms: 'Hari',
+    },
+    'program_today': {
+      AppLanguage.ar: 'اليوم', AppLanguage.en: 'Today', AppLanguage.fr: "Aujourd'hui", AppLanguage.tr: 'Bugün',
+      AppLanguage.ur: 'آج', AppLanguage.id: 'Hari ini', AppLanguage.ms: 'Hari ini',
+    },
     'section_latest_notifications': {
       AppLanguage.ar: 'أحدث الإشعارات', AppLanguage.en: 'Latest notifications', AppLanguage.fr: 'Dernières notifications',
       AppLanguage.tr: 'Son bildirimler', AppLanguage.ur: 'تازہ ترین اطلاعات',

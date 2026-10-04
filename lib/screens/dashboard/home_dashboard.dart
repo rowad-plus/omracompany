@@ -5,6 +5,7 @@ import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../notifications/notifications_screen.dart';
+import '../trips/trip_detail_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -18,6 +19,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
   void initState() {
     super.initState();
     context.read<AppState>().fetchDashboard();
+  }
+
+  Future<void> _openTrip(int? id) async {
+    if (id == null) return;
+    final state = context.read<AppState>();
+    var match = state.apiTrips.where((t) => t.id == id);
+    if (match.isEmpty) {
+      await state.fetchApiTrips();
+      match = state.apiTrips.where((t) => t.id == id);
+    }
+    if (match.isEmpty || !mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => TripDetailScreen(trip: match.first)));
+    if (mounted) context.read<AppState>().fetchDashboard();
   }
 
   Color _activityColor(String key) {
@@ -153,6 +167,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             title: trip['title'] as String? ?? '',
                             subtitle: _tripSubtitle(trip, t),
                             trailing: _tripPill(trip, t),
+                            onTap: () => _openTrip(trip['id'] as int?),
                           ),
                         ),
                     ],

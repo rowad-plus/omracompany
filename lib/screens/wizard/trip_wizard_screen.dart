@@ -35,14 +35,16 @@ class _ProgramDay {
 /// البرنامج الموجودة قبل ما تعرض النموذج.
 class TripWizardScreen extends StatefulWidget {
   final int? editingTripId;
-  const TripWizardScreen({super.key, this.editingTripId});
+  /// يفتح المعالج مباشرة على خطوة معينة (مثلاً 3 = البرنامج).
+  final int initialStep;
+  const TripWizardScreen({super.key, this.editingTripId, this.initialStep = 0});
 
   @override
   State<TripWizardScreen> createState() => _TripWizardScreenState();
 }
 
 class _TripWizardScreenState extends State<TripWizardScreen> {
-  int step = 0;
+  late int step = widget.initialStep;
   bool saving = false;
   bool loadingEditData = false;
   String? error;

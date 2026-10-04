@@ -5,7 +5,11 @@ import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/departure_point_sheet.dart';
 import '../../widgets/shared_widgets.dart';
+import '../dashboard/bookings_screen.dart';
 import '../wizard/trip_wizard_screen.dart';
+import 'bus_assign_screen.dart';
+import 'hotel_assign_screen.dart';
+import 'trip_program_screen.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final ApiTrip trip;
@@ -18,6 +22,39 @@ class TripDetailScreen extends StatefulWidget {
 class _TripDetailScreenState extends State<TripDetailScreen> {
   late ApiTrip trip = widget.trip;
   bool busy = false;
+  Map<String, dynamic>? editData;
+  bool programLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProgram();
+  }
+
+  Future<void> _loadProgram() async {
+    setState(() => programLoading = true);
+    final data = await context.read<AppState>().fetchTripEditData(trip.id);
+    if (!mounted) return;
+    setState(() {
+      editData = data ?? editData;
+      programLoading = false;
+    });
+  }
+
+  void _refreshTripFromState() {
+    final matches = context.read<AppState>().apiTrips.where((t) => t.id == trip.id);
+    if (matches.isNotEmpty) setState(() => trip = matches.first);
+  }
+
+  Future<void> _push(Widget screen) async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    if (mounted) _refreshTripFromState();
+  }
+
+  Future<void> _editProgram() async {
+    await _push(TripWizardScreen(editingTripId: trip.id, initialStep: 3));
+    if (mounted) _loadProgram();
+  }
 
   Future<void> _toggleStopped(String Function(String) t) async {
     setState(() => busy = true);
@@ -77,12 +114,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => TripWizardScreen(editingTripId: trip.id)),
-              );
-              if (!mounted) return;
-              final matches = context.read<AppState>().apiTrips.where((t) => t.id == trip.id);
-              if (matches.isNotEmpty) setState(() => trip = matches.first);
+              await _push(TripWizardScreen(editingTripId: trip.id));
+              if (mounted) _loadProgram();
             },
           ),
         ],
@@ -104,6 +137,54 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         : SizedBox(height: 160, child: _heroPlaceholder(isStopped)),
                   )
                 : _heroPlaceholder(isStopped),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => _push(TripBookingsScreen(trip: trip)),
+              icon: const Icon(Icons.groups_outlined, size: 20),
+              label: Text('${t('trip_pilgrims')} (${trip.bookingsCount})'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TripProgramBanner(
+            data: editData,
+            loading: programLoading,
+            onDefine: _editProgram,
+            onOpen: () {
+              if (editData == null) return;
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => TripProgramScreen(title: trip.title, data: editData!, onEdit: _editProgram),
+              ));
+            },
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _AssignButton(
+                  icon: Icons.apartment_outlined,
+                  label: t('action_assign_hotel'),
+                  value: trip.hotelName,
+                  onTap: () => _push(HotelAssignScreen(trip: trip)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _AssignButton(
+                  icon: Icons.directions_bus_outlined,
+                  label: t('action_assign_buses'),
+                  value: trip.buses.isEmpty ? null : '${trip.buses.length} ${t('unit_bus')}',
+                  onTap: () => _push(BusAssignScreen(trip: trip)),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           AppCard(
@@ -242,6 +323,63 @@ class _DetailActionIcon extends StatelessWidget {
             const SizedBox(height: 6),
             Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AssignButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? value;
+  final VoidCallback onTap;
+  const _AssignButton({required this.icon, required this.label, required this.value, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 19, color: AppColors.primaryDark),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(
+                      value ?? '—',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
