@@ -73,6 +73,7 @@ class TripAnnouncement {
   final String? bus;
   final String message;
   final int recipients;
+  final int? whatsappCount; // null = ما اتبعتش واتساب
   final String? sentAt;
   const TripAnnouncement({
     required this.id,
@@ -82,6 +83,7 @@ class TripAnnouncement {
     required this.bus,
     required this.message,
     required this.recipients,
+    required this.whatsappCount,
     required this.sentAt,
   });
 
@@ -93,6 +95,7 @@ class TripAnnouncement {
         bus: j['bus'] as String?,
         message: j['message'] as String? ?? '',
         recipients: (j['recipients_count'] as num?)?.toInt() ?? 0,
+        whatsappCount: (j['whatsapp_count'] as num?)?.toInt(),
         sentAt: j['sent_at'] as String?,
       );
 
@@ -407,7 +410,11 @@ class _AnnouncementCard extends StatelessWidget {
             if ((a.bus ?? '').isNotEmpty) line(Icons.directions_bus_outlined, '${t('activity_bus')}: ${a.bus}'),
             const SizedBox(height: 6),
             Text(
-              '${t('ann_sent_to').replaceAll('{n}', '${a.recipients}')}${a.sentAt != null ? ' · ${a.sentAt}' : ''}',
+              [
+                t('ann_sent_to').replaceAll('{n}', '${a.recipients}'),
+                if (a.whatsappCount != null) t('ann_whatsapp_count').replaceAll('{n}', '${a.whatsappCount}'),
+                if (a.sentAt != null) a.sentAt!,
+              ].join(' · '),
               style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
             ),
           ],
@@ -444,6 +451,7 @@ class _AnnouncementSheetState extends State<_AnnouncementSheet> {
   DateTime date = DateTime.now();
   TimeOfDay? time;
   bool notifyApp = true;
+  bool whatsappAuto = false;
   bool whatsapp = false;
   bool sending = false;
 
@@ -501,6 +509,7 @@ class _AnnouncementSheetState extends State<_AnnouncementSheet> {
           ? null
           : '${widget.departureDate!.year}-${_two(widget.departureDate!.month)}-${_two(widget.departureDate!.day)}',
       'notify': notifyApp,
+      'whatsapp': whatsappAuto,
     });
     if (!mounted) return;
     setState(() => sending = false);
@@ -616,6 +625,13 @@ class _AnnouncementSheetState extends State<_AnnouncementSheet> {
                 title: Text(t('ann_notify_app'), style: const TextStyle(fontSize: 13.5)),
                 subtitle: Text(t('ann_will_reach').replaceAll('{n}', '${widget.pilgrims}'),
                     style: const TextStyle(fontSize: 11.5)),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: whatsappAuto,
+                onChanged: (v) => setState(() => whatsappAuto = v),
+                title: Text(t('ann_whatsapp_auto'), style: const TextStyle(fontSize: 13.5)),
+                subtitle: Text(t('ann_whatsapp_auto_hint'), style: const TextStyle(fontSize: 11.5)),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
