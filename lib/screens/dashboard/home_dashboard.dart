@@ -135,7 +135,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               ],
             ),
           ),
-          SectionHeader(title: t('section_upcoming_trips')),
+          SectionHeader(title: t('section_current_upcoming_trips')),
           AppCard(
             margin: const EdgeInsets.symmetric(horizontal: 18),
             child: upcomingTrips.isEmpty
@@ -151,9 +151,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           child: InfoRow(
                             leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: trip['thumbnail'] as String?),
                             title: trip['title'] as String? ?? '',
-                            subtitle:
-                                '${trip['duration']} ${t('unit_days')} — ${trip['booked']}/${trip['seats']} ${t('unit_seat')}',
-                            trailing: StatusPill.warning('${trip['occupancy']}%'),
+                            subtitle: _tripSubtitle(trip, t),
+                            trailing: _tripPill(trip, t),
                           ),
                         ),
                     ],
@@ -185,6 +184,31 @@ class _HomeDashboardState extends State<HomeDashboard> {
       ),
     );
   }
+}
+
+/// "12/10 — Day 3 of 10 — 18/40 seats" for current trips,
+/// "12/10 — 10 days — 18/40 seats" for upcoming ones.
+String _tripSubtitle(Map<String, dynamic> trip, String Function(String) t) {
+  final parts = <String>[];
+  final start = DateTime.tryParse(trip['start_date'] as String? ?? '');
+  if (start != null) parts.add('${start.day}/${start.month}');
+  final dayNumber = trip['day_number'] as num?;
+  if (trip['phase'] == 'current' && dayNumber != null) {
+    parts.add(t('trip_day_of').replaceAll('{d}', '$dayNumber').replaceAll('{n}', '${trip['duration']}'));
+  } else {
+    parts.add('${trip['duration']} ${t('unit_days')}');
+  }
+  parts.add('${trip['booked']}/${trip['seats']} ${t('unit_seat')}');
+  return parts.join(' — ');
+}
+
+Widget _tripPill(Map<String, dynamic> trip, String Function(String) t) {
+  if (trip['phase'] == 'current') return StatusPill.success(t('trip_phase_current'));
+  final days = trip['days_until'] as num?;
+  if (days == null) return StatusPill.warning('${trip['occupancy']}%');
+  if (days == 0) return StatusPill.info(t('trip_starts_today'));
+  if (days == 1) return StatusPill.info(t('trip_starts_tomorrow'));
+  return StatusPill.warning(t('trip_in_days').replaceAll('{n}', '$days'));
 }
 
 String _fmtNumber(dynamic value) {

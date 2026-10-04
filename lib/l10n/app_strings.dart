@@ -366,6 +366,37 @@ class AppStrings {
       AppLanguage.tr: 'Yaklaşan seyahatler', AppLanguage.ur: 'آنے والے سفر',
       AppLanguage.id: 'Perjalanan mendatang', AppLanguage.ms: 'Perjalanan akan datang',
     },
+    'section_current_upcoming_trips': {
+      AppLanguage.ar: 'الرحلات الحالية والقادمة', AppLanguage.en: 'Current & upcoming trips',
+      AppLanguage.fr: 'Voyages en cours et à venir', AppLanguage.tr: 'Devam eden ve yaklaşan seyahatler',
+      AppLanguage.ur: 'جاری اور آنے والے سفر', AppLanguage.id: 'Perjalanan berjalan & mendatang',
+      AppLanguage.ms: 'Perjalanan semasa & akan datang',
+    },
+    'trip_phase_current': {
+      AppLanguage.ar: 'جارية الآن', AppLanguage.en: 'In progress', AppLanguage.fr: 'En cours',
+      AppLanguage.tr: 'Devam ediyor', AppLanguage.ur: 'جاری ہے', AppLanguage.id: 'Berlangsung',
+      AppLanguage.ms: 'Sedang berjalan',
+    },
+    'trip_starts_today': {
+      AppLanguage.ar: 'تبدأ اليوم', AppLanguage.en: 'Starts today', AppLanguage.fr: "Commence aujourd'hui",
+      AppLanguage.tr: 'Bugün başlıyor', AppLanguage.ur: 'آج شروع', AppLanguage.id: 'Mulai hari ini',
+      AppLanguage.ms: 'Bermula hari ini',
+    },
+    'trip_starts_tomorrow': {
+      AppLanguage.ar: 'تبدأ غدًا', AppLanguage.en: 'Starts tomorrow', AppLanguage.fr: 'Commence demain',
+      AppLanguage.tr: 'Yarın başlıyor', AppLanguage.ur: 'کل شروع', AppLanguage.id: 'Mulai besok',
+      AppLanguage.ms: 'Bermula esok',
+    },
+    'trip_in_days': {
+      AppLanguage.ar: 'بعد {n} يوم', AppLanguage.en: 'In {n} days', AppLanguage.fr: 'Dans {n} jours',
+      AppLanguage.tr: '{n} gün sonra', AppLanguage.ur: '{n} دن بعد', AppLanguage.id: '{n} hari lagi',
+      AppLanguage.ms: '{n} hari lagi',
+    },
+    'trip_day_of': {
+      AppLanguage.ar: 'اليوم {d} من {n}', AppLanguage.en: 'Day {d} of {n}', AppLanguage.fr: 'Jour {d} sur {n}',
+      AppLanguage.tr: '{n} günün {d}. günü', AppLanguage.ur: '{n} میں سے دن {d}', AppLanguage.id: 'Hari {d} dari {n}',
+      AppLanguage.ms: 'Hari {d} daripada {n}',
+    },
     'section_latest_notifications': {
       AppLanguage.ar: 'أحدث الإشعارات', AppLanguage.en: 'Latest notifications', AppLanguage.fr: 'Dernières notifications',
       AppLanguage.tr: 'Son bildirimler', AppLanguage.ur: 'تازہ ترین اطلاعات',
