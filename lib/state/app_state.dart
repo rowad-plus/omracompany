@@ -1261,25 +1261,24 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  // ------- برنامج الرحلة: الانطلاق/المزارات/التنقلات بالوقت والباص -------
+  // ------- تحديد تجمّع وإشعار: مواعيد بتتبعت لمعتمري الرحلة -------
 
-  /// {activities, buses, ziyarat, types} — null لو فشل (أو الباك إند لسه مش متحدث).
-  Future<Map<String, dynamic>?> fetchTripActivities(int tripId) async {
+  /// {announcements, buses, ziyarat, pilgrims_count} — null لو فشل.
+  Future<Map<String, dynamic>?> fetchTripAnnouncements(int tripId, {DateTime? departureDate}) async {
+    final q = departureDate == null
+        ? ''
+        : '?departure_date=${departureDate.year}-${departureDate.month.toString().padLeft(2, '0')}-${departureDate.day.toString().padLeft(2, '0')}';
     try {
-      return await _api.get('/umrah-trips/$tripId/activities') as Map<String, dynamic>;
+      return await _api.get('/umrah-trips/$tripId/announcements$q') as Map<String, dynamic>;
     } catch (_) {
       return null;
     }
   }
 
-  /// [activityId] null = إضافة، غير كده تعديل. بيرجع رسالة الخطأ أو null.
-  Future<String?> saveTripActivity(int tripId, Map<String, dynamic> data, {int? activityId}) async {
+  /// بيرجع رسالة الخطأ أو null.
+  Future<String?> sendTripAnnouncement(int tripId, Map<String, dynamic> data) async {
     try {
-      if (activityId == null) {
-        await _api.post('/umrah-trips/$tripId/activities', data);
-      } else {
-        await _api.put('/umrah-trips/$tripId/activities/$activityId', data);
-      }
+      await _api.post('/umrah-trips/$tripId/announcements', data);
       return null;
     } on ApiException catch (e) {
       return e.message;
@@ -1288,9 +1287,9 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<String?> deleteTripActivity(int tripId, int activityId) async {
+  Future<String?> deleteTripAnnouncement(int tripId, int id) async {
     try {
-      await _api.delete('/umrah-trips/$tripId/activities/$activityId');
+      await _api.delete('/umrah-trips/$tripId/announcements/$id');
       return null;
     } on ApiException catch (e) {
       return e.message;

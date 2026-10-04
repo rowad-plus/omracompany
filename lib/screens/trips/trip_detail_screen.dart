@@ -23,7 +23,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   late ApiTrip trip = widget.trip;
   bool busy = false;
   Map<String, dynamic>? editData;
-  Map<String, dynamic>? activitiesData;
+  Map<String, dynamic>? announcementsData;
   bool programLoading = true;
 
   @override
@@ -35,11 +35,13 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
   Future<void> _loadProgram() async {
     setState(() => programLoading = true);
     final state = context.read<AppState>();
-    final results = await Future.wait([state.fetchTripEditData(trip.id), state.fetchTripActivities(trip.id)]);
+    final data = await state.fetchTripEditData(trip.id);
+    final run = TripRun.from(data ?? editData, DateTime.now());
+    final ann = await state.fetchTripAnnouncements(trip.id, departureDate: run?.start);
     if (!mounted) return;
     setState(() {
-      editData = results[0] ?? editData;
-      activitiesData = results[1] ?? activitiesData;
+      editData = data ?? editData;
+      announcementsData = ann ?? announcementsData;
       programLoading = false;
     });
   }
@@ -54,10 +56,6 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     if (mounted) _refreshTripFromState();
   }
 
-  Future<void> _editProgram() async {
-    await _push(TripWizardScreen(editingTripId: trip.id, initialStep: 3));
-    if (mounted) _loadProgram();
-  }
 
   Future<void> _toggleStopped(String Function(String) t) async {
     setState(() => busy = true);
@@ -158,17 +156,11 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           const SizedBox(height: 12),
           TripProgramBanner(
             data: editData,
-            activitiesData: activitiesData,
+            announcementsData: announcementsData,
             loading: programLoading,
             onOpen: () async {
-              if (editData == null) return;
               await Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => TripProgramScreen(
-                  tripId: trip.id,
-                  title: trip.title,
-                  data: editData!,
-                  onEditText: _editProgram,
-                ),
+                builder: (_) => TripProgramScreen(tripId: trip.id, title: trip.title, data: editData),
               ));
               if (mounted) _loadProgram();
             },
