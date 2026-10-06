@@ -17,6 +17,7 @@ import '../travelers/travelers_screen.dart';
 import '../users/users_screen.dart';
 import '../wallet/tickets_screen.dart';
 import '../wallet/wallet_screen.dart';
+import '../subscription/subscription_screen.dart';
 import '../../widgets/shared_widgets.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -109,6 +110,11 @@ class ProfileScreen extends StatelessWidget {
               () => push(const ReportsScreen())),
         if (canManageUsers) _menuItem(context, Icons.manage_accounts_outlined, t('profile_users'), () => push(const UsersScreen())),
         if (ownerOnly) _menuItem(context, Icons.business_outlined, t('profile_company'), () => push(const CompanyScreen())),
+        if (ownerOnly)
+          SubscriptionMenuEntry(
+            builder: (featured) => _menuItem(context, Icons.workspace_premium_outlined,
+                featured ? '${t('sub_title')} ★' : t('sub_title'), () => push(const SubscriptionScreen())),
+          ),
         if (ownerOnly) _menuItem(context, Icons.account_balance_wallet_outlined, t('profile_wallet'), () => push(const WalletScreen())),
         if (ownerOnly) _menuItem(context, Icons.support_agent_outlined, t('tickets_title'), () => push(const TicketsScreen())),
         if (ownerOnly) _menuItem(context, Icons.account_balance_outlined, t('profile_bank_info'), () => push(const BankInfoScreen())),
