@@ -335,6 +335,13 @@ class _RolesTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final t = state.t;
+    // Server-provided labels ("bookings.view" → "عرض الحجوزات"), shown
+    // without the "(إضافة/تعديل/حذف)"-style detail to keep the chips short.
+    final permissionLabels = <String, String>{
+      for (final g in state.permissionGroups.values)
+        for (final e in g.permissions.entries)
+          e.key: e.value.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim(),
+    };
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -370,11 +377,11 @@ class _RolesTab extends StatelessWidget {
                                   Expanded(
                                     child: Row(
                                       children: [
-                                        Text(role.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                        if (role.isOwner) ...[
-                                          const SizedBox(width: 6),
-                                          StatusPill.warning(t('owner_role_badge')),
-                                        ],
+                                        // The owner role is stored as "Owner" — show it translated.
+                                        if (role.isOwner)
+                                          StatusPill.warning(t('owner_role_badge'))
+                                        else
+                                          Text(role.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                                       ],
                                     ),
                                   ),
@@ -396,7 +403,9 @@ class _RolesTab extends StatelessWidget {
                               Wrap(
                                 spacing: 5,
                                 runSpacing: 5,
-                                children: role.permissions.map((p) => StatusPill.info(p)).toList(),
+                                children: role.permissions
+                                    .map((p) => StatusPill.info(permissionLabels[p] ?? p))
+                                    .toList(),
                               ),
                             ],
                           ),
