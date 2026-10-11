@@ -19,14 +19,33 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
   final Set<int> selected = {};
   String query = '';
 
+  /// Chosen departure day (Y-m-d) — null until the bookings load.
+  String? day;
+
   @override
   void initState() {
     super.initState();
     context.read<AppState>().fetchBookings();
   }
 
-  List<Map<String, dynamic>> _tripBookings(AppState state) =>
+  List<Map<String, dynamic>> _allTripBookings(AppState state) =>
       state.bookingsList.where((b) => b['trip_id'] == widget.trip.id && b['status'] != 'cancelled').toList();
+
+  /// Only the chosen departure day's pilgrims: a daily trip must never put
+  /// people travelling on different days in one room.
+  List<Map<String, dynamic>> _tripBookings(AppState state) {
+    final all = _allTripBookings(state);
+    final days = departureDaysOf(all);
+    if (days.length <= 1) return all;
+    final d = days.contains(day) ? day : defaultDepartureDay(days);
+    return all.where((b) => b['departure_date'] == d).toList();
+  }
+
+  bool _matches(Map<String, dynamic> b, String q) {
+    if (q.isEmpty) return true;
+    final phone = (b['customer_phone'] ?? (b['user'] as Map<String, dynamic>?)?['phone'] ?? '') as String;
+    return bookingName(b).contains(q) || (b['ref'] as String? ?? '').contains(q) || phone.contains(q);
+  }
 
   Future<void> _houseSelected(List<Map<String, dynamic>> selectedBookings) async {
     if (selectedBookings.isEmpty) return;
@@ -66,9 +85,11 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
       final key = '${b['hotel_id']}|${b['room_number']}';
       assignedByRoom.putIfAbsent(key, () => []).add(b);
     }
-    final filteredUnassigned = query.isEmpty
-        ? unassigned
-        : unassigned.where((b) => ((b['user'] as Map<String, dynamic>?)?['name'] as String? ?? '').contains(query)).toList();
+    final filteredUnassigned = unassigned.where((b) => _matches(b, query)).toList();
+    final allTrip = _allTripBookings(state);
+    final days = departureDaysOf(allTrip);
+    final currentDay = days.contains(day) ? day : defaultDepartureDay(days);
+    final dayCounts = {for (final d in days) d: allTrip.where((b) => b['departure_date'] == d).length};
 
     return Scaffold(
       appBar: AppBar(
@@ -77,12 +98,26 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
       ),
       body: state.bookingsLoading && state.bookingsData == null
           ? const Center(child: CircularProgressIndicator())
+          : state.bookingsData == null && state.bookingsError != null
+          ? LoadErrorView(message: state.bookingsError!, onRetry: () => context.read<AppState>().fetchBookings())
           : Column(
               children: [
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
                     children: [
+                      if (days.length > 1) ...[
+                        DepartureDayBar(
+                          days: days,
+                          selected: currentDay,
+                          counts: dayCounts,
+                          onSelect: (d) => setState(() {
+                            day = d;
+                            selected.clear();
+                          }),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
                       Text(t('section_rooms_formed'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
                       const SizedBox(height: 8),
                       if (assignedByRoom.isEmpty)
@@ -134,10 +169,11 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
                                                   contentPadding: EdgeInsets.zero,
                                                   value: selected.contains(b['id']),
                                                   title: Text(
-                                                    (b['user'] as Map<String, dynamic>?)?['name'] as String? ?? '—',
+                                                    bookingName(b),
                                                     style: const TextStyle(fontSize: 13),
                                                   ),
-                                                  subtitle: Text('${b['persons_count']} ${t('unit_seat')}'),
+                                                  subtitle: Text(bookingDetails(b, t('unit_seat')),
+                                                      style: const TextStyle(fontSize: 11.5)),
                                                   onChanged: (v) => setState(
                                                       () => v == true ? selected.add(b['id'] as int) : selected.remove(b['id'])),
                                                 ),
@@ -321,8 +357,10 @@ class _RoomCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text((o['user'] as Map<String, dynamic>?)?['name'] as String? ?? '—',
-                    style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                Expanded(
+                  child: Text('${bookingName(o)}  ·  ${o['ref'] ?? '#${o['id']}'}',
+                      style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                ),
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.close, size: 16, color: AppColors.textMuted),

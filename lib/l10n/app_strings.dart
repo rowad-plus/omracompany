@@ -1557,9 +1557,10 @@ class AppStrings {
       AppLanguage.id: 'Perkiraan waktu tiba:', AppLanguage.ms: 'Jangkaan waktu ketibaan:',
     },
     'hm_trips_subtitle': {
-      AppLanguage.ar: 'الباصات الوافدة لكل رحلة', AppLanguage.en: 'Buses arriving per trip', AppLanguage.fr: 'Bus arrivant par voyage',
-      AppLanguage.tr: 'Her seyahat için gelen otobüsler', AppLanguage.ur: 'ہر سفر کے لیے آنے والی بسیں',
-      AppLanguage.id: 'Bus tiba per perjalanan', AppLanguage.ms: 'Bas tiba bagi setiap perjalanan',
+      AppLanguage.ar: 'اختر الرحلة لتسكين معتمريها في الغرف', AppLanguage.en: 'Choose a trip to assign its pilgrims to rooms',
+      AppLanguage.fr: 'Choisissez un voyage pour attribuer les chambres', AppLanguage.tr: 'Hacıları odalara yerleştirmek için bir sefer seçin',
+      AppLanguage.ur: 'کمروں میں رہائش دینے کے لیے سفر منتخب کریں',
+      AppLanguage.id: 'Pilih perjalanan untuk menempatkan jamaah di kamar', AppLanguage.ms: 'Pilih perjalanan untuk menempatkan jemaah dalam bilik',
     },
     'section_rooms_formed': {
       AppLanguage.ar: 'الغرف المُشكّلة', AppLanguage.en: 'Rooms formed', AppLanguage.fr: 'Chambres formées',
@@ -1643,7 +1644,7 @@ class AppStrings {
       AppLanguage.id: 'Total tidak hadir', AppLanguage.ms: 'Jumlah tidak hadir',
     },
     'bs_trips_subtitle': {
-      AppLanguage.ar: 'اختر الباص لتسجيل الحضور والغياب', AppLanguage.en: 'Choose a bus to record attendance',
+      AppLanguage.ar: 'اختر الرحلة لتسجيل حضور معتمريها', AppLanguage.en: 'Choose a bus to record attendance',
       AppLanguage.fr: 'Choisissez un bus pour enregistrer la présence', AppLanguage.tr: 'Yoklama kaydetmek için bir otobüs seçin',
       AppLanguage.ur: 'حاضری ریکارڈ کرنے کے لیے بس منتخب کریں',
       AppLanguage.id: 'Pilih bus untuk mencatat kehadiran', AppLanguage.ms: 'Pilih bas untuk merekod kehadiran',
@@ -2102,6 +2103,67 @@ class AppStrings {
       AppLanguage.fr: 'Le nom du rôle est requis', AppLanguage.tr: 'Rol adı gereklidir',
       AppLanguage.ur: 'کردار کا نام درکار ہے',
       AppLanguage.id: 'Nama peran diperlukan', AppLanguage.ms: 'Nama peranan diperlukan',
+    },
+
+    // ===== تبويبات المشرفين حسب المهمة (2026-10-11) =====
+    'nav_housing': {
+      AppLanguage.ar: 'التسكين', AppLanguage.en: 'Housing', AppLanguage.fr: 'Hébergement',
+      AppLanguage.tr: 'Konaklama', AppLanguage.ur: 'رہائش',
+      AppLanguage.id: 'Penempatan', AppLanguage.ms: 'Penempatan',
+    },
+    'nav_attendance': {
+      AppLanguage.ar: 'الحضور', AppLanguage.en: 'Attendance', AppLanguage.fr: 'Présence',
+      AppLanguage.tr: 'Yoklama', AppLanguage.ur: 'حاضری',
+      AppLanguage.id: 'Kehadiran', AppLanguage.ms: 'Kehadiran',
+    },
+    'housing_title': {
+      AppLanguage.ar: 'تسكين المعتمرين', AppLanguage.en: 'Pilgrim housing', AppLanguage.fr: 'Hébergement des pèlerins',
+      AppLanguage.tr: 'Hacı konaklaması', AppLanguage.ur: 'معتمرین کی رہائش',
+      AppLanguage.id: 'Penempatan jamaah', AppLanguage.ms: 'Penempatan jemaah',
+    },
+    'housing_subtitle': {
+      AppLanguage.ar: 'اختر الرحلة لتسكين معتمريها في الغرف', AppLanguage.en: 'Choose a trip to assign its pilgrims to rooms',
+      AppLanguage.fr: 'Choisissez un voyage pour attribuer les chambres', AppLanguage.tr: 'Hacıları odalara yerleştirmek için bir sefer seçin',
+      AppLanguage.ur: 'کمروں میں رہائش دینے کے لیے سفر منتخب کریں',
+      AppLanguage.id: 'Pilih perjalanan untuk menempatkan jamaah di kamar', AppLanguage.ms: 'Pilih perjalanan untuk menempatkan jemaah dalam bilik',
+    },
+    'attendance_title': {
+      AppLanguage.ar: 'الحضور والغياب', AppLanguage.en: 'Attendance', AppLanguage.fr: 'Présences',
+      AppLanguage.tr: 'Yoklama', AppLanguage.ur: 'حاضری و غیر حاضری',
+      AppLanguage.id: 'Kehadiran', AppLanguage.ms: 'Kehadiran',
+    },
+    'attendance_subtitle': {
+      AppLanguage.ar: 'اختر الرحلة لتسجيل حضور معتمريها', AppLanguage.en: 'Choose a trip to record its pilgrims\' attendance',
+      AppLanguage.fr: 'Choisissez un voyage pour noter les présences', AppLanguage.tr: 'Yoklama almak için bir sefer seçin',
+      AppLanguage.ur: 'حاضری درج کرنے کے لیے سفر منتخب کریں',
+      AppLanguage.id: 'Pilih perjalanan untuk mencatat kehadiran', AppLanguage.ms: 'Pilih perjalanan untuk merekod kehadiran',
+    },
+    'departure_day': {
+      AppLanguage.ar: 'يوم الانطلاق', AppLanguage.en: 'Departure day', AppLanguage.fr: 'Jour de départ',
+      AppLanguage.tr: 'Hareket günü', AppLanguage.ur: 'روانگی کا دن',
+      AppLanguage.id: 'Hari keberangkatan', AppLanguage.ms: 'Hari berlepas',
+    },
+    'today': {
+      AppLanguage.ar: 'اليوم', AppLanguage.en: 'Today', AppLanguage.fr: 'Aujourd\'hui',
+      AppLanguage.tr: 'Bugün', AppLanguage.ur: 'آج',
+      AppLanguage.id: 'Hari ini', AppLanguage.ms: 'Hari ini',
+    },
+    'load_failed': {
+      AppLanguage.ar: 'تعذّر تحميل البيانات، تحقّق من الإنترنت', AppLanguage.en: 'Couldn\'t load data, check your connection',
+      AppLanguage.fr: 'Impossible de charger les données, vérifiez la connexion', AppLanguage.tr: 'Veriler yüklenemedi, bağlantınızı kontrol edin',
+      AppLanguage.ur: 'ڈیٹا لوڈ نہیں ہو سکا، انٹرنیٹ چیک کریں',
+      AppLanguage.id: 'Gagal memuat data, periksa koneksi', AppLanguage.ms: 'Gagal memuatkan data, semak sambungan',
+    },
+    'no_permission': {
+      AppLanguage.ar: 'ليس لديك صلاحية لعرض هذه الصفحة', AppLanguage.en: 'You don\'t have permission to view this page',
+      AppLanguage.fr: 'Vous n\'avez pas l\'autorisation de voir cette page', AppLanguage.tr: 'Bu sayfayı görüntüleme yetkiniz yok',
+      AppLanguage.ur: 'آپ کو یہ صفحہ دیکھنے کی اجازت نہیں',
+      AppLanguage.id: 'Anda tidak punya izin melihat halaman ini', AppLanguage.ms: 'Anda tiada kebenaran melihat halaman ini',
+    },
+    'retry': {
+      AppLanguage.ar: 'إعادة المحاولة', AppLanguage.en: 'Retry', AppLanguage.fr: 'Réessayer',
+      AppLanguage.tr: 'Tekrar dene', AppLanguage.ur: 'دوبارہ کوشش کریں',
+      AppLanguage.id: 'Coba lagi', AppLanguage.ms: 'Cuba lagi',
     },
   };
 

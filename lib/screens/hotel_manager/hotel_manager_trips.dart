@@ -40,10 +40,12 @@ class _HotelManagerTripsState extends State<HotelManagerTrips> {
       },
       child: state.apiTripsLoading && state.apiTrips.isEmpty
           ? const Center(child: CircularProgressIndicator())
+          : state.apiTrips.isEmpty && state.apiTripsError != null
+          ? ListView(children: [LoadErrorView(message: state.apiTripsError!, onRetry: state.fetchApiTrips)])
           : ListView(
               padding: const EdgeInsets.all(18),
               children: [
-                Text(t('section_upcoming_trips'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+                Text(t('housing_title'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
                 Text(t('hm_trips_subtitle'), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 16),
                 for (final trip in trips)

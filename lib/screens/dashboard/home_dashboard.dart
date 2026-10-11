@@ -57,7 +57,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
     if (data == null) {
       return RefreshIndicator(
         onRefresh: () => context.read<AppState>().fetchDashboard(),
-        child: ListView(children: const [SizedBox(height: 200), Center(child: Icon(Icons.wifi_off, size: 40))]),
+        child: ListView(children: [
+          const SizedBox(height: 120),
+          LoadErrorView(
+            message: state.dashboardError ?? t('load_failed'),
+            onRetry: () => context.read<AppState>().fetchDashboard(),
+          ),
+        ]),
       );
     }
 
@@ -139,8 +145,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 18),
               children: [
-                StatChip(label: t('stat_total_revenue'), value: _fmtNumber(kpis['total_revenue'])),
-                const SizedBox(width: 10),
+                // The server leaves revenue out for accounts without money
+                // permissions — hide the card rather than show "0".
+                if (kpis.containsKey('total_revenue')) ...[
+                  StatChip(label: t('stat_total_revenue'), value: _fmtNumber(kpis['total_revenue'])),
+                  const SizedBox(width: 10),
+                ],
                 StatChip(label: t('stat_bookings'), value: '${kpis['total_bookings']}'),
                 const SizedBox(width: 10),
                 StatChip(label: t('stat_travelers'), value: '${kpis['total_pilgrims']}'),

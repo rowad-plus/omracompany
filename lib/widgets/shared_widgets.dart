@@ -270,3 +270,125 @@ class AppCard extends StatelessWidget {
     );
   }
 }
+
+/// Shown instead of an empty list when a load failed — "no data" must never
+/// stand in for "couldn't load" or "not allowed".
+class LoadErrorView extends StatelessWidget {
+  final String message;
+  final VoidCallback? onRetry;
+  const LoadErrorView({super.key, required this.message, this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.read<AppState>().t;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_outlined, size: 40, color: AppColors.textMuted),
+          const SizedBox(height: 10),
+          Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13.5, color: AppColors.textSecondary)),
+          if (onRetry != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(t('retry')),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// First visible letter of a name ("  Amr" → "A"), "؟" when empty.
+String nameInitial(String? name) {
+  final n = (name ?? '').trim();
+  return n.isEmpty ? '؟' : n.characters.first;
+}
+
+/// Display name of a booking: the account holder's name.
+String bookingName(Map<String, dynamic> b) =>
+    ((b['user'] as Map<String, dynamic>?)?['name'] as String?)?.trim().isNotEmpty == true
+        ? (b['user'] as Map<String, dynamic>)['name'] as String
+        : '—';
+
+/// "BK-00123 · 2 مقعد · 0501234567" — tells same-named pilgrims apart.
+String bookingDetails(Map<String, dynamic> b, String seatUnit) {
+  final ref = b['ref'] as String? ?? '#${b['id']}';
+  final phone = (b['customer_phone'] ?? (b['user'] as Map<String, dynamic>?)?['phone']) as String?;
+  return [
+    ref,
+    '${b['persons_count'] ?? 1} $seatUnit',
+    if (phone != null && phone.isNotEmpty) phone,
+  ].join(' · ');
+}
+
+/// Distinct departure days (Y-m-d) of [bookings], sorted.
+List<String> departureDaysOf(Iterable<Map<String, dynamic>> bookings) {
+  final days = bookings.map((b) => b['departure_date'] as String?).whereType<String>().toSet().toList()..sort();
+  return days;
+}
+
+/// The day to open on: today or the nearest upcoming day, else the latest past one.
+String? defaultDepartureDay(List<String> days) {
+  if (days.isEmpty) return null;
+  final now = DateTime.now();
+  final today = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  return days.firstWhere((d) => d.compareTo(today) >= 0, orElse: () => days.last);
+}
+
+/// Horizontal chips to pick which departure day's pilgrims are shown —
+/// daily / recurring trips otherwise mix every day's pilgrims together.
+class DepartureDayBar extends StatelessWidget {
+  final List<String> days;
+  final String? selected;
+  final Map<String, int> counts;
+  final ValueChanged<String> onSelect;
+  const DepartureDayBar({super.key, required this.days, required this.selected, required this.onSelect, this.counts = const {}});
+
+  String _label(String ymd, String Function(String) t) {
+    final d = DateTime.tryParse(ymd);
+    if (d == null) return ymd;
+    final now = DateTime.now();
+    if (d.year == now.year && d.month == now.month && d.day == now.day) return t('today');
+    return '${d.day}/${d.month}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.read<AppState>().t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(t('departure_day'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 38,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: days.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final d = days[i];
+              final on = d == selected;
+              final c = counts[d];
+              return ChoiceChip(
+                selected: on,
+                showCheckmark: false,
+                label: Text(c == null ? _label(d, t) : '${_label(d, t)} ($c)'),
+                labelStyle: TextStyle(fontSize: 12.5, color: on ? Colors.white : AppColors.text, fontWeight: FontWeight.w600),
+                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.surface,
+                side: BorderSide(color: on ? AppColors.primary : AppColors.border),
+                onSelected: (_) => onSelect(d),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}

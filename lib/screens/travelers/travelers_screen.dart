@@ -33,16 +33,19 @@ class _TravelersScreenState extends State<TravelersScreen> {
         title: Text(t('travelers_title')),
         foregroundColor: AppColors.text,
         actions: [
-          IconButton(
-            onPressed: () => showAddTravelerSheet(context),
-            icon: const Icon(Icons.person_add_alt_outlined),
-          ),
+          if (state.permissions.contains('customers.manage') || state.currentRoles.contains(UserRole.owner))
+            IconButton(
+              onPressed: () => showAddTravelerSheet(context),
+              icon: const Icon(Icons.person_add_alt_outlined),
+            ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () => context.read<AppState>().fetchCustomers(),
         child: state.customersLoading && travelers.isEmpty
             ? const Center(child: CircularProgressIndicator())
+            : travelers.isEmpty && state.customersError != null
+            ? ListView(children: [LoadErrorView(message: state.customersError!, onRetry: () => context.read<AppState>().fetchCustomers())])
             : ListView(
                 padding: const EdgeInsets.all(18),
                 children: [

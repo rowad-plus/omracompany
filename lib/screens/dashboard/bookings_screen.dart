@@ -264,7 +264,12 @@ class _BookingRow extends StatelessWidget {
       child: InfoRow(
         leading: InitialsAvatar(initials: name.isNotEmpty ? name.substring(0, 1) : '؟'),
         title: name,
-        subtitle: '${booking['persons_count']} ${t('unit_seat')} · ${booking['total_price']} ${booking['tripCurrency'] ?? ''}',
+        subtitle: [
+          '${booking['persons_count']} ${t('unit_seat')}',
+          if (booking['total_price'] != null) '${booking['total_price']} ${booking['tripCurrency'] ?? ''}',
+          if (booking['departure_date'] != null) booking['departure_date'],
+          if (booking['ref'] != null) booking['ref'],
+        ].join(' · '),
         trailing: pillFor(status, t('status_$status')),
       ),
     );
@@ -883,7 +888,7 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
               ),
               Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
-              Text('${b['tripTitle']} · ${b['total_price']} ${b['tripCurrency'] ?? ''}',
+              Text(b['total_price'] == null ? '${b['tripTitle']}' : '${b['tripTitle']} · ${b['total_price']} ${b['tripCurrency'] ?? ''}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               const SizedBox(height: 16),
               if (busy) const Center(child: CircularProgressIndicator()) else ...[

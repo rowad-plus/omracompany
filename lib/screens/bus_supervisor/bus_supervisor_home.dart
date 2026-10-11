@@ -48,7 +48,22 @@ class _BusSupervisorHomeState extends State<BusSupervisorHome> {
               ],
             ),
           ),
+          // Until the first load lands show progress / the error, never
+          // "0" and "no trips" (which read as "your data is gone").
           const SizedBox(height: 12),
+          if (state.bookingsData == null || (state.apiTrips.isEmpty && state.apiTripsError != null))
+            Padding(
+              padding: const EdgeInsets.only(top: 40),
+              child: (state.bookingsError ?? state.apiTripsError) != null && !state.bookingsLoading && !state.apiTripsLoading
+                  ? LoadErrorView(
+                      message: (state.bookingsError ?? state.apiTripsError)!,
+                      onRetry: () {
+                        state.fetchApiTrips();
+                        state.fetchBookings();
+                      })
+                  : const Center(child: CircularProgressIndicator()),
+            )
+          else ...[
           SizedBox(
             height: 92,
             child: ListView(
@@ -90,6 +105,7 @@ class _BusSupervisorHomeState extends State<BusSupervisorHome> {
                 ],
               ),
             ),
+          ],
         ],
       ),
     );

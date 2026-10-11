@@ -102,7 +102,9 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        _menuItem(context, Icons.people_outline, t('profile_travelers'), () => push(const TravelersScreen())),
+        // Only for accounts the server lets see pilgrims (it 403s everyone else).
+        if (ownerOnly || state.permissions.contains('customers.view'))
+          _menuItem(context, Icons.people_outline, t('profile_travelers'), () => push(const TravelersScreen())),
         if (ownerOrTripManager) _menuItem(context, Icons.apartment_outlined, t('profile_hotels'), () => push(const HotelsScreen())),
         if (ownerOrTripManager) _menuItem(context, Icons.directions_bus_outlined, t('profile_transport'), () => push(const TransportScreen())),
         if (ownerOrTripManager)

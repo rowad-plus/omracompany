@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
@@ -18,6 +19,10 @@ class AttendanceScreen extends StatefulWidget {
 class _AttendanceScreenState extends State<AttendanceScreen> {
   String query = '';
 
+  /// Chosen departure day (Y-m-d): attendance is per day's bus, not the
+  /// whole trip's history.
+  String? day;
+
   @override
   void initState() {
     super.initState();
@@ -28,9 +33,18 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final t = state.t;
-    final bookings = state.bookingsList
-        .where((b) => b['trip_id'] == widget.trip.id && b['status'] != 'cancelled')
-        .where((b) => query.isEmpty || ((b['user'] as Map<String, dynamic>?)?['name'] as String? ?? '').contains(query))
+    final allTrip = state.bookingsList.where((b) => b['trip_id'] == widget.trip.id && b['status'] != 'cancelled').toList();
+    final days = departureDaysOf(allTrip);
+    final currentDay = days.contains(day) ? day : defaultDepartureDay(days);
+    final dayCounts = {for (final d in days) d: allTrip.where((b) => b['departure_date'] == d).length};
+    bool matches(Map<String, dynamic> b) {
+      if (query.isEmpty) return true;
+      final phone = (b['customer_phone'] ?? (b['user'] as Map<String, dynamic>?)?['phone'] ?? '') as String;
+      return bookingName(b).contains(query) || (b['ref'] as String? ?? '').contains(query) || phone.contains(query);
+    }
+    final bookings = allTrip
+        .where((b) => days.length <= 1 || b['departure_date'] == currentDay)
+        .where(matches)
         .toList();
     final present = bookings.where((b) => b['attendance_status'] == 'present').length;
     final absent = bookings.where((b) => b['attendance_status'] == 'absent').length;
@@ -39,9 +53,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       appBar: AppBar(title: Text(widget.trip.title), foregroundColor: AppColors.text),
       body: state.bookingsLoading && state.bookingsData == null
           ? const Center(child: CircularProgressIndicator())
+          : state.bookingsData == null && state.bookingsError != null
+          ? LoadErrorView(message: state.bookingsError!, onRetry: () => context.read<AppState>().fetchBookings())
           : ListView(
               padding: const EdgeInsets.all(18),
               children: [
+                if (days.length > 1) ...[
+                  DepartureDayBar(days: days, selected: currentDay, counts: dayCounts, onSelect: (d) => setState(() => day = d)),
+                  const SizedBox(height: 14),
+                ],
                 SizedBox(
                   height: 84,
                   child: Row(
@@ -65,13 +85,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
                       children: [
-                        InitialsAvatar(
-                            initials: ((b['user'] as Map<String, dynamic>?)?['name'] as String? ?? '؟').substring(0, 1)),
+                        InitialsAvatar(initials: nameInitial(bookingName(b))),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text((b['user'] as Map<String, dynamic>?)?['name'] as String? ?? '—',
-                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(bookingName(b), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500)),
+                              Text(bookingDetails(b, t('unit_seat')),
+                                  style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                            ],
+                          ),
                         ),
+                        if (((b['customer_phone'] ?? '') as String).isNotEmpty)
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            tooltip: b['customer_phone'] as String,
+                            icon: const Icon(Icons.call_outlined, size: 18, color: AppColors.primary),
+                            onPressed: () => launchUrl(Uri.parse('tel:${b['customer_phone']}')),
+                          ),
                         _AttendanceToggle(
                           status: b['attendance_status'] as String? ?? 'pending',
                           presentLabel: t('attendance_present'),

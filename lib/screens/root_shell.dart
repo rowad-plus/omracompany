@@ -46,18 +46,18 @@ class _RootShellState extends State<RootShell> {
     if (roles.contains(UserRole.hotelManager)) {
       if (tabs.isEmpty) {
         tabs.add(_Tab(state.t('nav_home'), Icons.grid_view_rounded, const HotelManagerHome()));
-        tabs.add(_Tab(state.t('nav_trips'), Icons.nights_stay_outlined, const HotelManagerTrips()));
+        tabs.add(_Tab(state.t('nav_housing'), Icons.bed_outlined, const HotelManagerTrips()));
       } else {
-        tabs.add(_Tab(state.t('nav_hotel_trips'), Icons.apartment_outlined, const HotelManagerTrips()));
+        tabs.add(_Tab(state.t('nav_housing'), Icons.bed_outlined, const HotelManagerTrips()));
       }
     }
 
     if (roles.contains(UserRole.busSupervisor)) {
       if (tabs.isEmpty) {
         tabs.add(_Tab(state.t('nav_home'), Icons.grid_view_rounded, const BusSupervisorHome()));
-        tabs.add(_Tab(state.t('nav_trips'), Icons.nights_stay_outlined, const BusSupervisorTrips()));
+        tabs.add(_Tab(state.t('nav_attendance'), Icons.fact_check_outlined, const BusSupervisorTrips()));
       } else {
-        tabs.add(_Tab(state.t('nav_bus_trips'), Icons.directions_bus_outlined, const BusSupervisorTrips()));
+        tabs.add(_Tab(state.t('nav_attendance'), Icons.fact_check_outlined, const BusSupervisorTrips()));
       }
     }
 

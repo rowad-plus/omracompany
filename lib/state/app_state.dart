@@ -209,11 +209,16 @@ class AppState extends ChangeNotifier {
   Map<String, dynamic>? dashboardData;
   bool dashboardLoading = false;
 
+  String? dashboardError;
+
   Future<void> fetchDashboard() async {
     dashboardLoading = true;
     notifyListeners();
     try {
       dashboardData = await _api.get('/dashboard') as Map<String, dynamic>;
+      dashboardError = null;
+    } catch (e) {
+      dashboardError = loadErrorMessage(e);
     } finally {
       dashboardLoading = false;
       notifyListeners();
@@ -242,6 +247,14 @@ class AppState extends ChangeNotifier {
   List<AssignableEmployee> apiEmployeesForAssign = [];
   bool apiTripsLoading = false;
 
+  /// Last load failure of [fetchApiTrips], shown instead of a misleading
+  /// "no trips" — null once a load succeeds.
+  String? apiTripsError;
+
+  /// 403 → "no permission", anything else → "check your connection".
+  String loadErrorMessage(Object e) =>
+      e is ApiException && e.statusCode == 403 ? t('no_permission') : t('load_failed');
+
   Future<void> fetchApiTrips() async {
     apiTripsLoading = true;
     notifyListeners();
@@ -252,6 +265,9 @@ class AppState extends ChangeNotifier {
       apiBuses = (res['buses'] as List<dynamic>).map((e) => AssignableBus.fromJson(e as Map<String, dynamic>)).toList();
       apiEmployeesForAssign =
           (res['employees'] as List<dynamic>).map((e) => AssignableEmployee.fromJson(e as Map<String, dynamic>)).toList();
+      apiTripsError = null;
+    } catch (e) {
+      apiTripsError = loadErrorMessage(e);
     } finally {
       apiTripsLoading = false;
       notifyListeners();
@@ -397,11 +413,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  String? bookingsError;
+
+  /// Every booking of the company in one response (per_page=500) — the
+  /// endpoint pages 15 at a time by default, which left housing/attendance
+  /// seeing only the newest 15 bookings.
   Future<void> fetchBookings() async {
     bookingsLoading = true;
     notifyListeners();
     try {
-      bookingsData = await _api.get('/bookings') as Map<String, dynamic>;
+      bookingsData = await _api.get('/bookings?per_page=500') as Map<String, dynamic>;
+      bookingsError = null;
+    } catch (e) {
+      bookingsError = loadErrorMessage(e);
     } finally {
       bookingsLoading = false;
       notifyListeners();
@@ -917,6 +941,8 @@ class AppState extends ChangeNotifier {
   List<Customer> customers = [];
   bool customersLoading = false;
 
+  String? customersError;
+
   Future<void> fetchCustomers({String? search}) async {
     customersLoading = true;
     notifyListeners();
@@ -924,6 +950,9 @@ class AppState extends ChangeNotifier {
       final query = search != null && search.isNotEmpty ? '?search=${Uri.encodeQueryComponent(search)}' : '';
       final res = await _api.get('/customers$query') as Map<String, dynamic>;
       customers = (res['customers'] as List<dynamic>).map((e) => Customer.fromJson(e as Map<String, dynamic>)).toList();
+      customersError = null;
+    } catch (e) {
+      customersError = loadErrorMessage(e);
     } finally {
       customersLoading = false;
       notifyListeners();
