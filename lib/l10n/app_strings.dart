@@ -2256,6 +2256,13 @@ class AppStrings {
       AppLanguage.ur: 'کمرے کی گنجائش (افراد)',
       AppLanguage.id: 'Kapasitas kamar (orang)', AppLanguage.ms: 'Kapasiti bilik (orang)',
     },
+    'hm_pick_bus': {AppLanguage.ar: 'الباصات — اختر باصًا لتسكين معتمريه', AppLanguage.en: 'Buses — pick one to house its pilgrims'},
+    'hm_all_buses': {AppLanguage.ar: 'كل الباصات', AppLanguage.en: 'All buses'},
+    'hm_no_bus': {AppLanguage.ar: 'بدون باص', AppLanguage.en: 'No bus'},
+    'hm_pilgrims': {AppLanguage.ar: 'معتمر', AppLanguage.en: 'pilgrims'},
+    'hm_housed': {AppLanguage.ar: 'مُسكَّن', AppLanguage.en: 'housed'},
+    'hm_waiting': {AppLanguage.ar: 'ينتظر', AppLanguage.en: 'waiting'},
+    'hm_select_all_waiting': {AppLanguage.ar: 'تحديد الكل', AppLanguage.en: 'Select all'},
     'bus_word': {
       AppLanguage.ar: 'باص', AppLanguage.en: 'Bus', AppLanguage.fr: 'Bus',
       AppLanguage.tr: 'Otobüs', AppLanguage.ur: 'بس',

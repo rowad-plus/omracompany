@@ -25,6 +25,10 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
   /// Chosen departure day (Y-m-d) — the list's day, else the nearest one.
   late String? day = widget.initialDay;
 
+  /// Bus being housed: null = all buses, [_noBus] = pilgrims without a bus.
+  int? bus;
+  static const _noBus = -1;
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +47,16 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
     final d = days.contains(day) ? day : defaultDepartureDay(days);
     return all.where((b) => b['departure_date'] == d).toList();
   }
+
+  /// The chosen day's pilgrims on the chosen bus.
+  List<Map<String, dynamic>> _busBookings(List<Map<String, dynamic>> dayBookings) {
+    if (bus == null) return dayBookings;
+    if (bus == _noBus) return dayBookings.where((b) => b['bus_id'] == null).toList();
+    return dayBookings.where((b) => b['bus_id'] == bus).toList();
+  }
+
+  static int _people(Iterable<Map<String, dynamic>> list) =>
+      list.fold<int>(0, (n, b) => n + ((b['persons_count'] as num?)?.toInt() ?? 1));
 
   bool _matches(Map<String, dynamic> b, String q) {
     if (q.isEmpty) return true;
@@ -81,7 +95,8 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final t = state.t;
-    final bookings = _tripBookings(state);
+    final dayBookings = _tripBookings(state);
+    final bookings = _busBookings(dayBookings);
     final unassigned = bookings.where((b) => b['hotel_id'] == null).toList();
     final assignedByRoom = <String, List<Map<String, dynamic>>>{};
     for (final b in bookings.where((b) => b['hotel_id'] != null)) {
@@ -116,11 +131,21 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
                           counts: dayCounts,
                           onSelect: (d) => setState(() {
                             day = d;
+                            bus = null;
                             selected.clear();
                           }),
                         ),
                         const SizedBox(height: 14),
                       ],
+                      _BusBar(
+                        bookings: dayBookings,
+                        selected: bus,
+                        onSelect: (v) => setState(() {
+                          bus = v;
+                          selected.clear();
+                        }),
+                      ),
+                      const SizedBox(height: 14),
                       Text(t('section_rooms_formed'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
                       const SizedBox(height: 8),
                       if (assignedByRoom.isEmpty)
@@ -148,6 +173,21 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
                           child: Column(
                             children: [
                               if (unassigned.isNotEmpty) ...[
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text('${_people(unassigned)} ${t('hm_pilgrims')} ${t('hm_waiting')}',
+                                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => setState(() {
+                                        final ids = filteredUnassigned.map((b) => b['id'] as int);
+                                        selected.containsAll(ids) ? selected.removeAll(ids) : selected.addAll(ids);
+                                      }),
+                                      child: Text(t('hm_select_all_waiting'), style: const TextStyle(fontSize: 12)),
+                                    ),
+                                  ],
+                                ),
                                 TextField(
                                   onChanged: (v) => setState(() => query = v),
                                   decoration: InputDecoration(
@@ -285,7 +325,7 @@ class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(t('room_occupant_count_label'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
-                  Text('${widget.selectedBookings.length}',
+                  Text('${widget.selectedBookings.fold<int>(0, (n, b) => n + ((b['persons_count'] as num?)?.toInt() ?? 1))}',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
                 ],
               ),
@@ -313,6 +353,97 @@ class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The day's buses as cards — pilgrims on board, housed vs waiting — so the
+/// hotel manager opens a bus and houses the people on it.
+class _BusBar extends StatelessWidget {
+  final List<Map<String, dynamic>> bookings;
+  final int? selected;
+  final ValueChanged<int?> onSelect;
+  const _BusBar({required this.bookings, required this.selected, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.watch<AppState>().t;
+    final busIds = <int>[];
+    final labels = <int, String>{};
+    for (final b in bookings) {
+      final id = b['bus_id'] as int?;
+      if (id == null || labels.containsKey(id)) continue;
+      busIds.add(id);
+      labels[id] = '${(b['bus'] as Map<String, dynamic>?)?['bus_number'] ?? id}';
+    }
+    busIds.sort((a, b) => labels[a]!.compareTo(labels[b]!));
+    final noBus = bookings.where((b) => b['bus_id'] == null).toList();
+    if (busIds.isEmpty) return const SizedBox.shrink();
+
+    Widget card(int? value, String title, List<Map<String, dynamic>> list) {
+      final people = _RoomAssignScreenState._people(list);
+      final housed = _RoomAssignScreenState._people(list.where((b) => b['hotel_id'] != null));
+      final isSel = selected == value;
+      final done = people > 0 && housed == people;
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(end: 8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => onSelect(value),
+          child: Container(
+            width: 132,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isSel ? AppColors.primaryLight : AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isSel ? AppColors.primary : AppColors.border, width: isSel ? 1.6 : 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(value == null ? Icons.groups_outlined : Icons.directions_bus_outlined,
+                        size: 16, color: isSel ? AppColors.primary : AppColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800)),
+                    ),
+                    if (done) const Icon(Icons.check_circle, size: 15, color: AppColors.success),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('$people ${t('hm_pilgrims')}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                Text('$housed ${t('hm_housed')} · ${people - housed} ${t('hm_waiting')}',
+                    style: TextStyle(fontSize: 10.5, color: done ? AppColors.success : AppColors.textSecondary)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(t('hm_pick_bus'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 86,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              card(null, t('hm_all_buses'), bookings),
+              for (final id in busIds)
+                card(id, '${t('bus_word')} ${labels[id]}', bookings.where((b) => b['bus_id'] == id).toList()),
+              if (noBus.isNotEmpty) card(_RoomAssignScreenState._noBus, t('hm_no_bus'), noBus),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
