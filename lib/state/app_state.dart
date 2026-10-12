@@ -87,6 +87,12 @@ class AppState extends ChangeNotifier {
   String? companyLogo;
   Set<String> permissions = {};
 
+  /// Every company this account works for (a hotel's housing manager can
+  /// serve several). [activeCompanyId] is the one the app works on.
+  List<Map<String, dynamic>> companies = [];
+  int? activeCompanyId;
+  static const _companyPrefsKey = 'provider_active_company';
+
   /// بيحوّل صلاحيات الحساب الفعلية (من الـ API) لمجموعة أدوار العرض القديمة،
   /// عشان نفس منطق التنقل (RootShell) يشتغل من غير أي تغيير. لو الحساب عنده
   /// صلاحيات الفندق والباص مع بعض (زي "مسؤول عام")، بياخد التبويبين مع بعض.
@@ -114,6 +120,124 @@ class AppState extends ChangeNotifier {
     companyLogo = company?['logo'] as String?;
     permissions = (account['permissions'] as List<dynamic>? ?? []).cast<String>().toSet();
     currentRoles = _rolesFromPermissions(account['role'] as String? ?? '', permissions);
+    companies = (account['companies'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+    activeCompanyId = (account['company_id'] as num?)?.toInt();
+    _api.companyId = activeCompanyId;
+  }
+
+  /// Work on another of this account's companies: the server answers every
+  /// request for that company (X-Company-Id), with this account's role there.
+  Future<String?> switchCompany(int companyId) async {
+    final prev = _api.companyId;
+    _api.companyId = companyId;
+    try {
+      final account = await _api.get('/me') as Map<String, dynamic>;
+      _applyAccountPayload(account);
+      (await SharedPreferences.getInstance()).setInt(_companyPrefsKey, companyId);
+      // Data of the previous company must not linger on screen.
+      bookingsData = null;
+      dashboardData = null;
+      apiTrips = [];
+      notifyListeners();
+      fetchBookings();
+      fetchApiTrips();
+      return null;
+    } on ApiException catch (e) {
+      _api.companyId = prev;
+      return e.message;
+    } catch (_) {
+      _api.companyId = prev;
+      return 'تعذّر تبديل الشركة';
+    }
+  }
+
+  // ------- مسؤول تسكين الفندق: الباصات القادمة (كل الشركات) -------
+  Map<String, dynamic>? arrivals;
+  bool arrivalsLoading = false;
+  String? arrivalsError;
+
+  Future<void> fetchArrivals() async {
+    arrivalsLoading = true;
+    arrivalsError = null;
+    notifyListeners();
+    try {
+      arrivals = await _api.get('/hotel/arrivals') as Map<String, dynamic>;
+    } on ApiException catch (e) {
+      arrivalsError = e.message;
+    } catch (_) {
+      arrivalsError = 'تعذّر تحميل الباصات القادمة';
+    }
+    arrivalsLoading = false;
+    notifyListeners();
+  }
+
+  /// Houses [bookings] (pilgrims of possibly several companies/trips) in a
+  /// hotel — [hotelByCompany] maps company → that company's hotel record —
+  /// and, when [roomNumber] is given, in that room. One call per
+  /// company + trip (a room's companions must share the trip server-side).
+  Future<String?> houseArrivals({
+    required List<Map<String, dynamic>> bookings,
+    required Map<int, int> hotelByCompany,
+    String? roomNumber,
+  }) async {
+    final groups = <String, List<Map<String, dynamic>>>{};
+    for (final b in bookings) {
+      groups.putIfAbsent('${b['company_id']}|${b['trip_id']}', () => []).add(b);
+    }
+    final people = bookings.fold<int>(0, (n, b) => n + ((b['persons_count'] as num?)?.toInt() ?? 1));
+    try {
+      for (final g in groups.values) {
+        final company = (g.first['company_id'] as num).toInt();
+        final hotelId = hotelByCompany[company];
+        if (hotelId == null) return 'لم يُحدَّد فندق لشركة ${g.first['company_name'] ?? ''}';
+        await _api.patch('/bookings/${g.first['id']}/assign-hotel', {
+          'hotel_id': hotelId,
+          if (roomNumber != null) 'room_number': roomNumber,
+          if (roomNumber != null) 'room_capacity': people.clamp(1, 6),
+          'companion_ids': g.skip(1).map((b) => b['id']).toList(),
+        }, company);
+      }
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر حفظ التسكين';
+    } finally {
+      await fetchArrivals();
+    }
+  }
+
+  /// Takes a pilgrim out of its room but keeps it in the hotel.
+  Future<String?> removeFromRoom(Map<String, dynamic> b) async {
+    try {
+      await _api.patch('/bookings/${b['id']}/assign-hotel', {
+        'hotel_id': b['hotel_id'],
+        'room_number': null,
+        'room_capacity': null,
+        'companion_ids': [],
+      }, (b['company_id'] as num).toInt());
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر الحفظ';
+    } finally {
+      await fetchArrivals();
+    }
+  }
+
+  /// Takes a pilgrim out of its hotel (and room).
+  Future<String?> removeFromHotel(Map<String, dynamic> b) async {
+    try {
+      await _api.delete('/bookings/${b['id']}/assign-hotel', null, (b['company_id'] as num).toInt());
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر الحفظ';
+    } finally {
+      await fetchArrivals();
+    }
   }
 
   /// بيتشيك لو فيه توكن محفوظ من جلسة سابقة ويحاول يسترجع بيانات الحساب.
@@ -128,8 +252,19 @@ class AppState extends ChangeNotifier {
     }
 
     _api.setToken(token);
+    // Reopen on the company the account was last working on.
+    _api.companyId = prefs.getInt(_companyPrefsKey);
     try {
-      final account = await _api.get('/me') as Map<String, dynamic>;
+      Map<String, dynamic> account;
+      try {
+        account = await _api.get('/me') as Map<String, dynamic>;
+      } on ApiException catch (e) {
+        // No longer a member of the saved company → home company.
+        if (e.statusCode != 403 || _api.companyId == null) rethrow;
+        await prefs.remove(_companyPrefsKey);
+        _api.companyId = null;
+        account = await _api.get('/me') as Map<String, dynamic>;
+      }
       _applyAccountPayload(account);
       isLoggedIn = true;
       _registerPush();
@@ -189,7 +324,12 @@ class AppState extends ChangeNotifier {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenPrefsKey);
+    await prefs.remove(_companyPrefsKey);
     _api.setToken(null);
+    _api.companyId = null;
+    companies = [];
+    activeCompanyId = null;
+    arrivals = null;
 
     isLoggedIn = false;
     accountName = '';
@@ -396,11 +536,13 @@ class AppState extends ChangeNotifier {
   /// إضافة باص سريعة — بس رقم الباص، مش لازم شركة نقل.
   Future<(int?, String?)> quickAddBusForBooking({
     required String busNumber,
+    String? plateNumber,
     int? capacity,
   }) async {
     try {
       final res = await _api.post('/buses', {
         'bus_number': busNumber,
+        'plate_number': plateNumber,
         'capacity': capacity,
       }) as Map<String, dynamic>;
       final newId = (res['bus'] as Map<String, dynamic>)['id'] as int;
@@ -923,6 +1065,7 @@ class AppState extends ChangeNotifier {
   Future<String?> createBus({
     int? busCompanyId,
     required String busNumber,
+    String? plateNumber,
     int? capacity,
     String? driverName,
     String? driverPhone,
@@ -931,6 +1074,7 @@ class AppState extends ChangeNotifier {
       await _api.post('/buses', {
         if (busCompanyId != null) 'bus_company_id': busCompanyId,
         'bus_number': busNumber,
+        'plate_number': plateNumber,
         'capacity': capacity,
         'driver_name': driverName,
         'driver_phone': driverPhone,
@@ -948,6 +1092,7 @@ class AppState extends ChangeNotifier {
     required int id,
     int? busCompanyId,
     required String busNumber,
+    String? plateNumber,
     int? capacity,
     String? driverName,
     String? driverPhone,
@@ -956,6 +1101,7 @@ class AppState extends ChangeNotifier {
       await _api.put('/buses/$id', {
         'bus_company_id': busCompanyId,
         'bus_number': busNumber,
+        'plate_number': plateNumber,
         'capacity': capacity,
         'driver_name': driverName,
         'driver_phone': driverPhone,

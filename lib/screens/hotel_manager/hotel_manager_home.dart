@@ -2,122 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/shared_widgets.dart';
-import 'room_assign_screen.dart';
+import 'arrivals_screen.dart';
 
-class HotelManagerHome extends StatefulWidget {
+/// Hotel housing manager's home: greeting, totals and the next buses.
+class HotelManagerHome extends StatelessWidget {
   const HotelManagerHome({super.key});
-
-  @override
-  State<HotelManagerHome> createState() => _HotelManagerHomeState();
-}
-
-class _HotelManagerHomeState extends State<HotelManagerHome> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<AppState>().fetchApiTrips();
-    context.read<AppState>().fetchBookings();
-  }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final t = state.t;
-    final bookings = state.bookingsList.where((b) => b['status'] != 'cancelled').toList();
-    final roomsFormed = bookings.where((b) => b['hotel_id'] != null).length;
-    final waiting = bookings.where((b) => b['hotel_id'] == null).length;
-
-    int waitingCountFor(int tripId) =>
-        bookings.where((b) => b['trip_id'] == tripId && b['hotel_id'] == null).length;
-    int totalCountFor(int tripId) => bookings.where((b) => b['trip_id'] == tripId).length;
-
-    final activeTrips = state.apiTrips.where((tr) => tr.status == 'active').toList()
-      ..sort((a, b) => waitingCountFor(b.id).compareTo(waitingCountFor(a.id)));
-    final topTrips = activeTrips.take(2).toList();
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        await state.fetchApiTrips();
-        await state.fetchBookings();
-      },
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${t('greeting_hello')}، ${state.accountName}', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(t('hm_home_subtitle'), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              ],
-            ),
-          ),
-          // Until the first load lands show progress / the error, never
-          // "0" and "no trips" (which read as "your data is gone").
-          const SizedBox(height: 12),
-          if (state.bookingsData == null || (state.apiTrips.isEmpty && state.apiTripsError != null))
-            Padding(
-              padding: const EdgeInsets.only(top: 40),
-              child: (state.bookingsError ?? state.apiTripsError) != null && !state.bookingsLoading && !state.apiTripsLoading
-                  ? LoadErrorView(
-                      message: (state.bookingsError ?? state.apiTripsError)!,
-                      onRetry: () {
-                        state.fetchApiTrips();
-                        state.fetchBookings();
-                      })
-                  : const Center(child: CircularProgressIndicator()),
-            )
-          else ...[
-          SizedBox(
-            height: 92,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              children: [
-                StatChip(label: t('stat_rooms_formed'), value: '$roomsFormed'),
-                const SizedBox(width: 10),
-                StatChip(label: t('stat_waiting_housing'), value: '$waiting'),
-              ],
-            ),
-          ),
-          SectionHeader(title: t('section_upcoming_trips')),
-          if (topTrips.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Text(t('no_trips_yet'), style: const TextStyle(color: AppColors.textSecondary)),
-            )
-          else
-            AppCard(
-              margin: const EdgeInsets.symmetric(horizontal: 18),
-              child: Column(
-                children: [
-                  for (var i = 0; i < topTrips.length; i++) ...[
-                    if (i > 0) const Divider(height: 21, thickness: 1, color: AppColors.border),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: InfoRow(
-                        leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: topTrips[i].thumbnail),
-                        title: topTrips[i].title,
-                        subtitle: totalCountFor(topTrips[i].id) == 0
-                            ? t('no_hotel_assigned')
-                            : waitingCountFor(topTrips[i].id) == 0
-                                ? t('all_housed')
-                                : '${waitingCountFor(topTrips[i].id)} ${t('stat_waiting_housing')}',
-                        trailing: const ForwardChevron(),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => RoomAssignScreen(trip: topTrips[i])),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+    return ArrivalsList(
+      limit: 4,
+      header: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${t('greeting_hello')}، ${state.accountName}', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(t('hm_home_subtitle'), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ],
-        ],
+        ),
       ),
     );
   }

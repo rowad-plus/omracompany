@@ -92,7 +92,40 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ),
-        if ((state.companyName ?? '').isNotEmpty)
+        if (state.companies.length > 1)
+          // Works for several companies (e.g. a hotel's housing manager).
+          Center(
+            child: PopupMenuButton<int>(
+              tooltip: t('company_switch_title'),
+              onSelected: (id) async {
+                final err = await context.read<AppState>().switchCompany(id);
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(err ?? '${t('company_switched')} ${context.read<AppState>().companyName ?? ''}'),
+                ));
+              },
+              itemBuilder: (_) => [
+                for (final c in state.companies)
+                  PopupMenuItem<int>(
+                    value: (c['id'] as num).toInt(),
+                    child: Row(children: [
+                      Icon((c['id'] as num).toInt() == state.activeCompanyId ? Icons.radio_button_checked : Icons.radio_button_off,
+                          size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text('${c['name']}'),
+                    ]),
+                  ),
+              ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(state.companyName ?? '', style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  const Icon(Icons.swap_horiz, size: 16, color: AppColors.primary),
+                ],
+              ),
+            ),
+          )
+        else if ((state.companyName ?? '').isNotEmpty)
           Center(child: Text(state.companyName!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary))),
         Center(
           child: Text(

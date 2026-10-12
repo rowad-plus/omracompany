@@ -263,6 +263,7 @@ class _AddBusSheet extends StatefulWidget {
 
 class _AddBusSheetState extends State<_AddBusSheet> {
   final numberCtrl = TextEditingController();
+  final plateCtrl = TextEditingController();
   final driverCtrl = TextEditingController();
   final capacityCtrl = TextEditingController();
   int? companyId;
@@ -277,6 +278,7 @@ class _AddBusSheetState extends State<_AddBusSheet> {
     final bus = widget.bus;
     if (bus != null) {
       numberCtrl.text = bus.busNumber;
+      plateCtrl.text = bus.plateNumber;
       driverCtrl.text = bus.driverName;
       if (bus.capacity != null) capacityCtrl.text = '${bus.capacity}';
       companyId = bus.busCompanyId;
@@ -286,6 +288,7 @@ class _AddBusSheetState extends State<_AddBusSheet> {
   @override
   void dispose() {
     numberCtrl.dispose();
+    plateCtrl.dispose();
     driverCtrl.dispose();
     capacityCtrl.dispose();
     super.dispose();
@@ -303,12 +306,14 @@ class _AddBusSheetState extends State<_AddBusSheet> {
             id: widget.bus!.id,
             busCompanyId: companyId,
             busNumber: numberCtrl.text.trim(),
+            plateNumber: plateCtrl.text.trim().isEmpty ? null : plateCtrl.text.trim(),
             capacity: int.tryParse(capacityCtrl.text.trim()),
             driverName: driverCtrl.text.trim().isEmpty ? null : driverCtrl.text.trim(),
           )
         : await state.createBus(
             busCompanyId: companyId,
             busNumber: numberCtrl.text.trim(),
+            plateNumber: plateCtrl.text.trim().isEmpty ? null : plateCtrl.text.trim(),
             capacity: int.tryParse(capacityCtrl.text.trim()),
             driverName: driverCtrl.text.trim().isEmpty ? null : driverCtrl.text.trim(),
           );
@@ -341,6 +346,8 @@ class _AddBusSheetState extends State<_AddBusSheet> {
               ],
               const SizedBox(height: 12),
               TextField(controller: numberCtrl, decoration: InputDecoration(labelText: t('field_name_or_plate'))),
+              const SizedBox(height: 14),
+              TextField(controller: plateCtrl, decoration: InputDecoration(labelText: t('field_plate_number'))),
               if (state.busCompanies.isNotEmpty) ...[
                 const SizedBox(height: 14),
                 DropdownButtonFormField<int>(

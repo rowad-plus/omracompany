@@ -2,60 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/shared_widgets.dart';
-import 'room_assign_screen.dart';
+import 'arrivals_screen.dart';
 
-class HotelManagerTrips extends StatefulWidget {
+/// "التسكين": the buses arriving in the coming days across every company this
+/// account houses for — open a bus, put its pilgrims in a hotel, then rooms.
+class HotelManagerTrips extends StatelessWidget {
   const HotelManagerTrips({super.key});
 
   @override
-  State<HotelManagerTrips> createState() => _HotelManagerTripsState();
-}
-
-class _HotelManagerTripsState extends State<HotelManagerTrips> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<AppState>().fetchApiTrips();
-    context.read<AppState>().fetchBookings();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final t = state.t;
-    final bookings = state.bookingsList.where((b) => b['status'] != 'cancelled').toList();
-
-    int waitingCountFor(int tripId) =>
-        bookings.where((b) => b['trip_id'] == tripId && b['hotel_id'] == null).length;
-
-    final trips = state.apiTrips.where((tr) => tr.status == 'active').toList()
-      ..sort((a, b) => waitingCountFor(b.id).compareTo(waitingCountFor(a.id)));
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        await state.fetchApiTrips();
-        await state.fetchBookings();
-      },
-      child: state.apiTripsLoading && state.apiTrips.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : state.apiTrips.isEmpty && state.apiTripsError != null
-          ? ListView(children: [LoadErrorView(message: state.apiTripsError!, onRetry: state.fetchApiTrips)])
-          : ListView(
-              padding: const EdgeInsets.all(18),
-              children: [
-                Text(t('housing_title'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
-                Text(t('hm_trips_subtitle'), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                const SizedBox(height: 16),
-                for (final trip in trips)
-                  TripDaysCard(
-                    trip: trip,
-                    onOpen: (day) => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => RoomAssignScreen(trip: trip, initialDay: day)),
-                    ),
-                  ),
-              ],
-            ),
+    final t = context.watch<AppState>().t;
+    return ArrivalsList(
+      header: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(t('hm_upcoming_buses'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+            Text(t('hm_trips_subtitle'), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ],
+        ),
+      ),
     );
   }
 }

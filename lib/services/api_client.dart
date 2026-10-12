@@ -34,11 +34,18 @@ class ApiClient {
 
   void setToken(String? token) => _token = token;
 
-  Map<String, String> get _headers => {
+  /// Company this account is working on (accounts linked to several
+  /// companies — e.g. a hotel's housing manager). Sent as X-Company-Id.
+  int? companyId;
+
+  Map<String, String> _headersFor(int? company) => {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         if (_token != null) 'Authorization': 'Bearer $_token',
+        if ((company ?? companyId) != null) 'X-Company-Id': '${company ?? companyId}',
       };
+
+  Map<String, String> get _headers => _headersFor(null);
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
@@ -89,16 +96,18 @@ class ApiClient {
     return _decode(res);
   }
 
-  Future<dynamic> patch(String path, [Map<String, dynamic>? data]) async {
+  /// [company] overrides the active company for this one call (housing a
+  /// pilgrim of another company on a shared bus).
+  Future<dynamic> patch(String path, [Map<String, dynamic>? data, int? company]) async {
     final res = await _http
-        .patch(_uri(path), headers: _headers, body: jsonEncode(data ?? {}))
+        .patch(_uri(path), headers: _headersFor(company), body: jsonEncode(data ?? {}))
         .timeout(_timeout, onTimeout: _throwTimeout);
     return _decode(res);
   }
 
-  Future<dynamic> delete(String path, [Map<String, dynamic>? data]) async {
+  Future<dynamic> delete(String path, [Map<String, dynamic>? data, int? company]) async {
     final res = await _http
-        .delete(_uri(path), headers: _headers, body: data == null ? null : jsonEncode(data))
+        .delete(_uri(path), headers: _headersFor(company), body: data == null ? null : jsonEncode(data))
         .timeout(_timeout, onTimeout: _throwTimeout);
     return _decode(res);
   }

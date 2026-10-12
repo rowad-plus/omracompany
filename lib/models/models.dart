@@ -184,6 +184,9 @@ class CompanyBus {
   final int id;
   final int? busCompanyId;
   final String busNumber;
+
+  /// Same plate at several companies = the same physical bus for the hotel.
+  final String plateNumber;
   final int? capacity;
   final String driverName;
   final String driverPhone;
@@ -193,6 +196,7 @@ class CompanyBus {
     required this.id,
     this.busCompanyId,
     required this.busNumber,
+    this.plateNumber = '',
     this.capacity,
     this.driverName = '',
     this.driverPhone = '',
@@ -203,6 +207,7 @@ class CompanyBus {
         id: j['id'] as int,
         busCompanyId: j['bus_company_id'] as int?,
         busNumber: j['bus_number'] as String? ?? '',
+        plateNumber: j['plate_number'] as String? ?? '',
         capacity: j['capacity'] as int?,
         driverName: j['driver_name'] as String? ?? '',
         driverPhone: j['driver_phone'] as String? ?? '',

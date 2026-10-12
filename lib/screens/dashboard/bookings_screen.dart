@@ -1361,6 +1361,7 @@ class _QuickAddBusDialog extends StatefulWidget {
 
 class _QuickAddBusDialogState extends State<_QuickAddBusDialog> {
   final numberCtrl = TextEditingController();
+  final plateCtrl = TextEditingController();
   final capacityCtrl = TextEditingController();
   bool saving = false;
   String? error;
@@ -1385,6 +1386,7 @@ class _QuickAddBusDialogState extends State<_QuickAddBusDialog> {
 
     final (newBusId, busErr) = await context.read<AppState>().quickAddBusForBooking(
           busNumber: numberCtrl.text.trim(),
+          plateNumber: plateCtrl.text.trim().isEmpty ? null : plateCtrl.text.trim(),
           capacity: int.tryParse(capacityCtrl.text.trim()),
         );
 
@@ -1413,6 +1415,8 @@ class _QuickAddBusDialogState extends State<_QuickAddBusDialog> {
               const SizedBox(height: 8),
             ],
             TextField(controller: numberCtrl, decoration: InputDecoration(labelText: t('field_name_or_plate'))),
+            const SizedBox(height: 12),
+            TextField(controller: plateCtrl, decoration: InputDecoration(labelText: t('field_plate_number'))),
             const SizedBox(height: 12),
             TextField(
               controller: capacityCtrl,
