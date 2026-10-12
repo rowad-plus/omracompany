@@ -188,6 +188,8 @@ class _TripBookingsScreenState extends State<TripBookingsScreen> {
                         onTap: () => showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
+                          // The map needs vertical drags (pan) — don't let the sheet take them.
+                          enableDrag: false,
                           backgroundColor: AppColors.surface,
                           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
                           builder: (ctx) => DeparturePointSheet(trip: widget.trip),
