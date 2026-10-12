@@ -143,7 +143,8 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: () => _push(TripBookingsScreen(trip: trip)),
+              // Multi-day trips ask "which day?" first.
+              onPressed: () => openPilgrimAction(context, trip, PilgrimAction.bookings),
               icon: const Icon(Icons.groups_outlined, size: 20),
               label: Text('${t('trip_pilgrims')} (${trip.bookingsCount})'),
               style: FilledButton.styleFrom(
@@ -183,6 +184,29 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                   label: t('action_assign_buses'),
                   value: trip.buses.isEmpty ? null : '${trip.buses.length} ${t('unit_bus')}',
                   onTap: () => _push(BusAssignScreen(trip: trip)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Housing the pilgrims of one departure day (rooms / bus).
+          Row(
+            children: [
+              Expanded(
+                child: _AssignButton(
+                  icon: Icons.meeting_room_outlined,
+                  label: t('action_rooms'),
+                  value: trip.upcomingDays.length > 1 ? t('choose_departure_day') : null,
+                  onTap: () => openPilgrimAction(context, trip, PilgrimAction.rooms),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _AssignButton(
+                  icon: Icons.airline_seat_recline_normal_outlined,
+                  label: t('action_pilgrim_bus'),
+                  value: trip.upcomingDays.length > 1 ? t('choose_departure_day') : null,
+                  onTap: () => openPilgrimAction(context, trip, PilgrimAction.bus),
                 ),
               ),
             ],

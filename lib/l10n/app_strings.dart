@@ -2160,6 +2160,47 @@ class AppStrings {
       AppLanguage.ur: 'آپ کو یہ صفحہ دیکھنے کی اجازت نہیں',
       AppLanguage.id: 'Anda tidak punya izin melihat halaman ini', AppLanguage.ms: 'Anda tiada kebenaran melihat halaman ini',
     },
+    'action_rooms': {
+      AppLanguage.ar: 'تسكين الغرف', AppLanguage.en: 'Room assignment', AppLanguage.fr: 'Attribution des chambres',
+      AppLanguage.tr: 'Oda yerleşimi', AppLanguage.ur: 'کمروں کی تقسیم',
+      AppLanguage.id: 'Penempatan kamar', AppLanguage.ms: 'Penempatan bilik',
+    },
+    'action_pilgrim_bus': {
+      AppLanguage.ar: 'تسكين الباص', AppLanguage.en: 'Bus seating', AppLanguage.fr: 'Affectation au bus',
+      AppLanguage.tr: 'Otobüs yerleşimi', AppLanguage.ur: 'بس میں بٹھانا',
+      AppLanguage.id: 'Penempatan bus', AppLanguage.ms: 'Penempatan bas',
+    },
+    'choose_departure_day': {
+      AppLanguage.ar: 'اختر يوم الانطلاق', AppLanguage.en: 'Choose the departure day', AppLanguage.fr: 'Choisissez le jour de départ',
+      AppLanguage.tr: 'Hareket gününü seçin', AppLanguage.ur: 'روانگی کا دن منتخب کریں',
+      AppLanguage.id: 'Pilih hari keberangkatan', AppLanguage.ms: 'Pilih hari berlepas',
+    },
+    'select_pilgrims_hint': {
+      AppLanguage.ar: 'اختر المعتمرين من القائمة بالأعلى', AppLanguage.en: 'Select pilgrims from the list above',
+      AppLanguage.fr: 'Sélectionnez les pèlerins dans la liste ci-dessus', AppLanguage.tr: 'Yukarıdaki listeden hacıları seçin',
+      AppLanguage.ur: 'اوپر کی فہرست سے معتمرین منتخب کریں',
+      AppLanguage.id: 'Pilih jamaah dari daftar di atas', AppLanguage.ms: 'Pilih jemaah daripada senarai di atas',
+    },
+    'action_house_hotel': {
+      AppLanguage.ar: 'تسكين في الفندق', AppLanguage.en: 'Assign to hotel', AppLanguage.fr: 'Affecter à l\'hôtel',
+      AppLanguage.tr: 'Otele yerleştir', AppLanguage.ur: 'ہوٹل میں ٹھہرائیں',
+      AppLanguage.id: 'Tempatkan di hotel', AppLanguage.ms: 'Tempatkan di hotel',
+    },
+    'action_house_room': {
+      AppLanguage.ar: 'تسكين في الغرفة', AppLanguage.en: 'Assign to room', AppLanguage.fr: 'Affecter à la chambre',
+      AppLanguage.tr: 'Odaya yerleştir', AppLanguage.ur: 'کمرے میں ٹھہرائیں',
+      AppLanguage.id: 'Tempatkan di kamar', AppLanguage.ms: 'Tempatkan dalam bilik',
+    },
+    'action_house_bus': {
+      AppLanguage.ar: 'تسكين في الباص', AppLanguage.en: 'Assign to bus', AppLanguage.fr: 'Affecter au bus',
+      AppLanguage.tr: 'Otobüse yerleştir', AppLanguage.ur: 'بس میں بٹھائیں',
+      AppLanguage.id: 'Tempatkan di bus', AppLanguage.ms: 'Tempatkan dalam bas',
+    },
+    'saved_ok': {
+      AppLanguage.ar: 'تم الحفظ', AppLanguage.en: 'Saved', AppLanguage.fr: 'Enregistré',
+      AppLanguage.tr: 'Kaydedildi', AppLanguage.ur: 'محفوظ ہو گیا',
+      AppLanguage.id: 'Tersimpan', AppLanguage.ms: 'Disimpan',
+    },
     'tomorrow': {
       AppLanguage.ar: 'بكرة', AppLanguage.en: 'Tomorrow', AppLanguage.fr: 'Demain',
       AppLanguage.tr: 'Yarın', AppLanguage.ur: 'کل',

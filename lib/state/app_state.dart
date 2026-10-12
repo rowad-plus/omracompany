@@ -464,6 +464,33 @@ class AppState extends ChangeNotifier {
   /// تسكين الفندق وتسكين الغرفة إجراءان منفصلان في الواجهة، لكن نفس الـ API:
   /// لو [roomNumber]/[roomCapacity] اتبعتوش، الباك إند بيحافظ على أي تسكين
   /// غرفة موجود قبل كده (ومنطقيًا العكس صحيح لو الفندق كان متسكن بالفعل).
+  /// Applies a change to the bookings already on screen right away, then
+  /// re-syncs with the server in the background — the screen no longer
+  /// waits on (or silently misses) the slow full reload.
+  void _patchBookings(Iterable<int> ids, Map<String, dynamic> changes) {
+    final idSet = ids.toSet();
+    for (final b in bookingsList) {
+      if (idSet.contains(b['id'])) b.addAll(changes);
+    }
+    notifyListeners();
+    fetchBookings();
+  }
+
+  Map<String, dynamic>? _hotelMap(int hotelId) {
+    for (final h in bookingHotels) {
+      if (h.id == hotelId) return {'id': h.id, 'name': h.name};
+    }
+    return null;
+  }
+
+  Map<String, dynamic>? _busMap(int busId) {
+    final list = (bookingsData?['busesList'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+    for (final b in list) {
+      if (b['id'] == busId) return {'id': busId, 'bus_number': b['bus_number']};
+    }
+    return {'id': busId};
+  }
+
   Future<String?> assignBookingHotel({
     required int bookingId,
     required int hotelId,
@@ -478,7 +505,12 @@ class AppState extends ChangeNotifier {
         if (roomCapacity != null) 'room_capacity': roomCapacity,
         'companion_ids': companionIds,
       });
-      await fetchBookings();
+      _patchBookings([bookingId, ...companionIds], {
+        'hotel_id': hotelId,
+        'hotel': _hotelMap(hotelId),
+        if (roomNumber != null) 'room_number': roomNumber,
+        if (roomCapacity != null) 'room_capacity': roomCapacity,
+      });
       return null;
     } on ApiException catch (e) {
       return e.message;
@@ -490,7 +522,7 @@ class AppState extends ChangeNotifier {
   Future<String?> clearBookingHotel(int bookingId) async {
     try {
       await _api.delete('/bookings/$bookingId/assign-hotel');
-      await fetchBookings();
+      _patchBookings([bookingId], {'hotel_id': null, 'hotel': null, 'room_number': null, 'room_capacity': null});
       return null;
     } on ApiException catch (e) {
       return e.message;
@@ -502,7 +534,7 @@ class AppState extends ChangeNotifier {
   Future<String?> assignBookingBus(int bookingId, int busId) async {
     try {
       await _api.patch('/bookings/$bookingId/assign-bus', {'bus_id': busId});
-      await fetchBookings();
+      _patchBookings([bookingId], {'bus_id': busId, 'bus': _busMap(busId)});
       return null;
     } on ApiException catch (e) {
       return e.message;
@@ -514,7 +546,7 @@ class AppState extends ChangeNotifier {
   Future<String?> clearBookingBus(int bookingId) async {
     try {
       await _api.delete('/bookings/$bookingId/assign-bus');
-      await fetchBookings();
+      _patchBookings([bookingId], {'bus_id': null, 'bus': null});
       return null;
     } on ApiException catch (e) {
       return e.message;
@@ -526,7 +558,7 @@ class AppState extends ChangeNotifier {
   Future<String?> markAttendance(int bookingId, String status) async {
     try {
       await _api.patch('/bookings/$bookingId/attendance', {'attendance_status': status});
-      await fetchBookings();
+      _patchBookings([bookingId], {'attendance_status': status});
       return null;
     } on ApiException catch (e) {
       return e.message;

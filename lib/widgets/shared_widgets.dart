@@ -413,15 +413,34 @@ String departureDayLabel(BuildContext context, String ymd) {
 /// a daily / recurring trip reads as "today's trip", "tomorrow's trip", …
 /// for the next two weeks. [onOpen] gets the chosen day (null = whole trip,
 /// used when the trip has no days in the window).
-class TripDaysCard extends StatelessWidget {
+class TripDaysCard extends StatefulWidget {
   final ApiTrip trip;
   final void Function(String? day) onOpen;
-  const TripDaysCard({super.key, required this.trip, required this.onOpen});
+
+  /// When true the day rows are hidden until the trip header is tapped
+  /// (a toggle), keeping long trip lists short.
+  final bool collapsible;
+
+  /// Show only the first N days (null = all two weeks).
+  final int? maxDays;
+  const TripDaysCard({super.key, required this.trip, required this.onOpen, this.collapsible = false, this.maxDays});
+
+  @override
+  State<TripDaysCard> createState() => _TripDaysCardState();
+}
+
+class _TripDaysCardState extends State<TripDaysCard> {
+  bool open = false;
 
   @override
   Widget build(BuildContext context) {
     final t = context.read<AppState>().t;
-    final days = trip.upcomingDays;
+    final trip = widget.trip;
+    final onOpen = widget.onOpen;
+    final all = trip.upcomingDays;
+    final days = widget.maxDays == null ? all : all.take(widget.maxDays!).toList();
+    final showDays = !widget.collapsible || open;
+    final upcomingBookings = days.fold<int>(0, (n, d) => n + d.bookings);
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -429,18 +448,31 @@ class TripDaysCard extends StatelessWidget {
         children: [
           InkWell(
             borderRadius: BorderRadius.circular(10),
-            onTap: days.isEmpty ? () => onOpen(null) : null,
+            onTap: days.isEmpty
+                ? () => onOpen(null)
+                : widget.collapsible
+                    ? () => setState(() => open = !open)
+                    : null,
             child: InfoRow(
               leading: InitialsAvatar(initials: '🌙', size: 34, imageUrl: trip.thumbnail),
               title: trip.title,
               subtitle: days.isNotEmpty
-                  ? '${days.length} ${t('departure_day')}'
+                  ? '${days.length} ${t('departure_day')} · $upcomingBookings ${t('unit_booking')}'
                   : trip.daysKnown
                       ? t('no_days_in_two_weeks')
                       : '${trip.bookingsCount} ${t('unit_booking')}',
-              trailing: days.isEmpty ? const ForwardChevron() : null,
+              trailing: days.isEmpty
+                  ? const ForwardChevron()
+                  : widget.collapsible
+                      ? AnimatedRotation(
+                          turns: open ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 180),
+                          child: const Icon(Icons.expand_more, color: AppColors.textSecondary),
+                        )
+                      : null,
             ),
           ),
+          if (showDays)
           for (final d in days) ...[
             const Divider(height: 14, color: AppColors.border),
             InkWell(

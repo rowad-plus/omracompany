@@ -5,6 +5,7 @@ import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
 import '../notifications/notifications_screen.dart';
+import 'bookings_screen.dart';
 import '../trips/trip_detail_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
@@ -19,6 +20,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   void initState() {
     super.initState();
     context.read<AppState>().fetchDashboard();
+    context.read<AppState>().fetchApiTrips();
   }
 
   Future<void> _openTrip(int? id) async {
@@ -56,7 +58,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
     if (data == null) {
       return RefreshIndicator(
-        onRefresh: () => context.read<AppState>().fetchDashboard(),
+        onRefresh: () async {
+          final s = context.read<AppState>();
+          await Future.wait([s.fetchDashboard(), s.fetchApiTrips()]);
+        },
         child: ListView(children: [
           const SizedBox(height: 120),
           LoadErrorView(
@@ -69,10 +74,28 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
     final kpis = data['kpis'] as Map<String, dynamic>;
     final upcomingTrips = (data['upcomingTrips'] as List<dynamic>).cast<Map<String, dynamic>>();
+    // Each trip's departures in the next 3 days as separate rows ("today's
+    // trip", "tomorrow's trip", …) — from the trips list's upcoming_days.
+    final now = DateTime.now();
+    String ymd(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final windowEnd = ymd(now.add(const Duration(days: 2)));
+    final dayRows = <(ApiTrip, TripDay)>[
+      for (final trip in state.apiTrips.where((tr) => tr.status == 'active'))
+        for (final d in trip.upcomingDays)
+          if (d.date.compareTo(windowEnd) <= 0) (trip, d),
+    ]..sort((a, b) {
+        final c = a.$2.date.compareTo(b.$2.date);
+        return c != 0 ? c : b.$2.bookings.compareTo(a.$2.bookings);
+      });
+    final useDayRows = state.apiTrips.any((tr) => tr.daysKnown);
     final recentActivity = (data['recentActivity'] as List<dynamic>).cast<Map<String, dynamic>>().take(3).toList();
 
     return RefreshIndicator(
-      onRefresh: () => context.read<AppState>().fetchDashboard(),
+      onRefresh: () async {
+          final s = context.read<AppState>();
+          await Future.wait([s.fetchDashboard(), s.fetchApiTrips()]);
+        },
       child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
@@ -162,7 +185,31 @@ class _HomeDashboardState extends State<HomeDashboard> {
           SectionHeader(title: t('section_current_upcoming_trips')),
           AppCard(
             margin: const EdgeInsets.symmetric(horizontal: 18),
-            child: upcomingTrips.isEmpty
+            child: useDayRows
+                ? (dayRows.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(t('no_upcoming_trips'), style: const TextStyle(color: AppColors.textSecondary)),
+                      )
+                    : Column(
+                        children: [
+                          for (final (trip, d) in dayRows)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: InfoRow(
+                                leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: trip.thumbnail),
+                                title: trip.title,
+                                subtitle:
+                                    '${departureDayLabel(context, d.date)} — ${d.bookings} ${t('unit_booking')} · ${d.persons} ${t('unit_person')}',
+                                trailing: _dayPill(d.date, t),
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => TripBookingsScreen(trip: trip, day: d.date)),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ))
+                : upcomingTrips.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.all(8),
                     child: Text(t('no_upcoming_trips'), style: const TextStyle(color: AppColors.textSecondary)),
@@ -225,6 +272,17 @@ String _tripSubtitle(Map<String, dynamic> trip, String Function(String) t) {
   }
   parts.add('${trip['booked']}/${trip['seats']} ${t('unit_seat')}');
   return parts.join(' — ');
+}
+
+/// "today" / "tomorrow" / "in N days" pill for a departure day.
+Widget _dayPill(String ymd, String Function(String) t) {
+  final d = DateTime.tryParse(ymd);
+  if (d == null) return const SizedBox.shrink();
+  final now = DateTime.now();
+  final diff = DateTime(d.year, d.month, d.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+  if (diff <= 0) return StatusPill.success(t('trip_starts_today'));
+  if (diff == 1) return StatusPill.info(t('trip_starts_tomorrow'));
+  return StatusPill.warning(t('trip_in_days').replaceAll('{n}', '$diff'));
 }
 
 Widget _tripPill(Map<String, dynamic> trip, String Function(String) t) {

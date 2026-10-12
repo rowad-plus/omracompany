@@ -76,6 +76,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                         for (final trip in trips)
                           TripDaysCard(
                             trip: trip,
+                            collapsible: true,
                             onOpen: (day) => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => TripBookingsScreen(trip: trip, day: day)),
                             ),
@@ -343,54 +344,6 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
     }
   }
 
-  Future<void> _continue() async {
-    final chosen = context
-        .read<AppState>()
-        .bookingsList
-        .where((b) => selected.contains(b['id']))
-        .toList();
-    if (chosen.isEmpty) return;
-
-    switch (widget.action) {
-      case _TripAction.hotel:
-        await showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: AppColors.surface,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-          builder: (ctx) => _BulkHotelSheet(bookings: chosen),
-        );
-        break;
-      case _TripAction.room:
-        await showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: AppColors.surface,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-          builder: (ctx) => _BulkRoomSheet(bookings: chosen),
-        );
-        break;
-      case _TripAction.bus:
-        await showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: AppColors.surface,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-          builder: (ctx) => _BulkBusSheet(bookings: chosen),
-        );
-        break;
-      case _TripAction.attendance:
-        await showModalBottomSheet(
-          context: context,
-          backgroundColor: AppColors.surface,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-          builder: (ctx) => _BulkAttendanceSheet(bookings: chosen),
-        );
-        break;
-    }
-    if (mounted) setState(() => selected.clear());
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -480,24 +433,12 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 12),
-            decoration: const BoxDecoration(color: AppColors.bg, border: Border(top: BorderSide(color: AppColors.border))),
-            child: SafeArea(
-              top: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text('${t('selected_count_prefix')} ${selected.length}',
-                        style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
-                  ),
-                  ElevatedButton(
-                    onPressed: selected.isEmpty ? null : _continue,
-                    child: Text(t('action_continue')),
-                  ),
-                ],
-              ),
-            ),
+          // Choose → act right here: hotel / room / bus / attendance controls
+          // sit under the list (no extra sheet hidden behind "continue").
+          _ActionPanel(
+            action: widget.action,
+            selectedBookings: state.bookingsList.where((b) => selected.contains(b['id'])).toList(),
+            onDone: () => setState(() => selected.clear()),
           ),
         ],
       ),
@@ -505,144 +446,45 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
   }
 }
 
-/// تسكين فندق لعدة معتمرين مرة واحدة — كل حجز بياخد نفس الفندق، وأي غرفة
-/// متسكنة قبل كده بتفضل زي ما هي.
-class _BulkHotelSheet extends StatefulWidget {
-  final List<Map<String, dynamic>> bookings;
-  const _BulkHotelSheet({required this.bookings});
+/// The bottom panel of the selection screen. The selected pilgrims are
+/// housed in one hotel / one room / one bus, or marked present / absent.
+class _ActionPanel extends StatefulWidget {
+  final _TripAction action;
+  final List<Map<String, dynamic>> selectedBookings;
+  final VoidCallback onDone;
+  const _ActionPanel({required this.action, required this.selectedBookings, required this.onDone});
 
   @override
-  State<_BulkHotelSheet> createState() => _BulkHotelSheetState();
+  State<_ActionPanel> createState() => _ActionPanelState();
 }
 
-class _BulkHotelSheetState extends State<_BulkHotelSheet> {
-  int? hotelId;
-  bool saving = false;
-  String? error;
-
-  @override
-  void initState() {
-    super.initState();
-    if (context.read<AppState>().saudiCities.isEmpty) {
-      context.read<AppState>().fetchCompanyHotels();
-    }
-  }
-
-  Future<void> _addNewHotel() async {
-    final newId = await showDialog<int>(context: context, builder: (ctx) => const _QuickAddHotelDialog());
-    if (newId != null) setState(() => hotelId = newId);
-  }
-
-  Future<void> _save() async {
-    if (hotelId == null) {
-      setState(() => error = context.read<AppState>().t('err_select_hotel'));
-      return;
-    }
-    setState(() {
-      saving = true;
-      error = null;
-    });
-
-    final state = context.read<AppState>();
-    final results = await Future.wait(
-      widget.bookings.map((b) => state.assignBookingHotel(bookingId: b['id'] as int, hotelId: hotelId!)),
-    );
-    final errors = results.whereType<String>().toList();
-    final firstError = errors.isNotEmpty ? errors.first : null;
-
-    if (!mounted) return;
-    setState(() => saving = false);
-    if (firstError == null) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() => error = firstError);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final t = state.t;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('${t('action_assign_hotel')} (${widget.bookings.length})',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              if (error != null) ...[
-                const SizedBox(height: 6),
-                Text(error!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      value: hotelId,
-                      decoration: InputDecoration(labelText: t('hotel_label')),
-                      items: state.bookingHotels.map((h) => DropdownMenuItem(value: h.id, child: Text(h.name))).toList(),
-                      onChanged: (v) => setState(() => hotelId = v),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: t('action_add_new_hotel'),
-                    onPressed: _addNewHotel,
-                    icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: saving ? null : _save,
-                child: saving
-                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(t('action_save')),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// تسكين غرفة واحدة لكل المعتمرين المختارين مع بعض — بيستخدم أول حجز
-/// كأساسي والباقي كـ"مرافقين" في نفس الغرفة، عشان يتحفظوا في استدعاء واحد.
-/// لازم كل المعتمرين المختارين يكونوا متسكنين في فندق قبل كده.
-class _BulkRoomSheet extends StatefulWidget {
-  final List<Map<String, dynamic>> bookings;
-  const _BulkRoomSheet({required this.bookings});
-
-  @override
-  State<_BulkRoomSheet> createState() => _BulkRoomSheetState();
-}
-
-class _BulkRoomSheetState extends State<_BulkRoomSheet> {
+class _ActionPanelState extends State<_ActionPanel> {
   final roomCtrl = TextEditingController();
   final capacityCtrl = TextEditingController();
   int? hotelId;
+  int? busId;
   bool saving = false;
   String? error;
+  Set<int> _lastIds = {};
 
-  /// People in the selected bookings (a booking can be 2-3 persons).
-  int get _people => widget.bookings.fold<int>(0, (n, b) => n + ((b['persons_count'] as num?)?.toInt() ?? 1));
+  List<Map<String, dynamic>> get _sel => widget.selectedBookings;
+  int get _people => _sel.fold<int>(0, (n, b) => n + ((b['persons_count'] as num?)?.toInt() ?? 1));
 
   @override
-  void initState() {
-    super.initState();
-    // Pre-pick the hotel when the selected pilgrims already share one, and
-    // keep their room number if they are already in the same room.
-    final hotels = widget.bookings.map((b) => b['hotel_id'] as int?).toSet();
-    if (hotels.length == 1) hotelId = hotels.first;
-    final rooms = widget.bookings.map((b) => b['room_number'] as String?).toSet();
-    if (rooms.length == 1 && rooms.first != null) roomCtrl.text = rooms.first!;
-    capacityCtrl.text = '${_people.clamp(1, 20)}';
+  void didUpdateWidget(covariant _ActionPanel old) {
+    super.didUpdateWidget(old);
+    final ids = _sel.map((b) => b['id'] as int).toSet();
+    if (ids.length == _lastIds.length && ids.containsAll(_lastIds)) return;
+    _lastIds = ids;
+    error = null;
+    // Pre-fill from what the selected pilgrims already share.
+    final hotels = _sel.map((b) => b['hotel_id'] as int?).toSet();
+    if (hotels.length == 1 && hotels.first != null) hotelId = hotels.first;
+    final rooms = _sel.map((b) => b['room_number'] as String?).toSet();
+    roomCtrl.text = rooms.length == 1 && rooms.first != null ? rooms.first! : '';
+    capacityCtrl.text = _sel.isEmpty ? '' : '${_people.clamp(1, 20)}';
+    final buses = _sel.map((b) => b['bus_id'] as int?).toSet();
+    if (buses.length == 1 && buses.first != null) busId = buses.first;
   }
 
   @override
@@ -652,268 +494,202 @@ class _BulkRoomSheetState extends State<_BulkRoomSheet> {
     super.dispose();
   }
 
-  Future<void> _save() async {
-    // The hotel is chosen right here (the server houses everyone in the
-    // same hotel + room in one call), so no separate "hotel first" step.
-    if (hotelId == null) {
-      setState(() => error = context.read<AppState>().t('err_select_hotel'));
-      return;
-    }
-    if (roomCtrl.text.trim().isEmpty) {
-      setState(() => error = context.read<AppState>().t('err_room_number_required'));
-      return;
-    }
-
+  Future<void> _run(Future<String?> Function(AppState) job) async {
     setState(() {
       saving = true;
       error = null;
     });
-
-    final primary = widget.bookings.first;
-    final companionIds = widget.bookings.skip(1).map((b) => b['id'] as int).toList();
-
-    final capacity = (int.tryParse(capacityCtrl.text.trim()) ?? _people).clamp(1, 20);
-    final result = await context.read<AppState>().assignBookingHotel(
-          bookingId: primary['id'] as int,
-          hotelId: hotelId!,
-          roomNumber: roomCtrl.text.trim(),
-          // Room capacity counts PEOPLE, not bookings.
-          roomCapacity: capacity,
-          companionIds: companionIds,
-        );
-
+    final state = context.read<AppState>();
+    final result = await job(state);
     if (!mounted) return;
     setState(() => saving = false);
     if (result == null) {
-      Navigator.of(context).pop();
+      widget.onDone();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.t('saved_ok'))));
     } else {
       setState(() => error = result);
     }
   }
 
+  Future<String?> _firstError(Iterable<Future<String?>> jobs) async =>
+      (await Future.wait(jobs)).whereType<String>().firstOrNull;
+
+  void _saveHotel() {
+    final t = context.read<AppState>().t;
+    if (hotelId == null) return setState(() => error = t('err_select_hotel'));
+    _run((s) => _firstError(_sel.map((b) => s.assignBookingHotel(bookingId: b['id'] as int, hotelId: hotelId!))));
+  }
+
+  void _saveRoom() {
+    final t = context.read<AppState>().t;
+    if (hotelId == null) return setState(() => error = t('err_select_hotel'));
+    if (roomCtrl.text.trim().isEmpty) return setState(() => error = t('err_room_number_required'));
+    final capacity = (int.tryParse(capacityCtrl.text.trim()) ?? _people).clamp(1, 20);
+    _run((s) => s.assignBookingHotel(
+          bookingId: _sel.first['id'] as int,
+          hotelId: hotelId!,
+          roomNumber: roomCtrl.text.trim(),
+          // Capacity counts PEOPLE, not bookings.
+          roomCapacity: capacity,
+          companionIds: _sel.skip(1).map((b) => b['id'] as int).toList(),
+        ));
+  }
+
+  void _saveBus() {
+    if (busId == null) return;
+    _run((s) => _firstError(_sel.map((b) => s.assignBookingBus(b['id'] as int, busId!))));
+  }
+
+  void _saveAttendance(String status) =>
+      _run((s) => _firstError(_sel.map((b) => s.markAttendance(b['id'] as int, status))));
+
+  Future<void> _addHotel() async {
+    final id = await showDialog<int>(context: context, builder: (_) => const _QuickAddHotelDialog());
+    if (id != null) setState(() => hotelId = id);
+  }
+
+  Future<void> _addBus() async {
+    final id = await showDialog<int>(context: context, builder: (_) => const _QuickAddBusDialog());
+    if (id != null) setState(() => busId = id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final t = state.t;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('${t('action_assign_room')} (${widget.bookings.length} · $_people ${t('unit_seat')})',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              if (error != null) ...[
-                const SizedBox(height: 6),
-                Text(error!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
-              ],
-              const SizedBox(height: 12),
-              DropdownButtonFormField<int>(
-                value: hotelId,
-                decoration: InputDecoration(labelText: t('hotel_label')),
-                items: state.bookingHotels.map((h) => DropdownMenuItem(value: h.id, child: Text(h.name))).toList(),
-                onChanged: (v) => setState(() => hotelId = v),
+    final none = _sel.isEmpty;
+    final busy = none || saving;
+
+    Widget mainButton(String label, VoidCallback onTap) => ElevatedButton(
+          onPressed: busy ? null : onTap,
+          child: saving
+              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : Text(label),
+        );
+
+    final hotelPicker = Row(children: [
+      Expanded(
+        child: DropdownButtonFormField<int>(
+          value: state.bookingHotels.any((h) => h.id == hotelId) ? hotelId : null,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: t('hotel_label'), isDense: true),
+          items: state.bookingHotels.map((h) => DropdownMenuItem(value: h.id, child: Text(h.name))).toList(),
+          onChanged: (v) => setState(() => hotelId = v),
+        ),
+      ),
+      IconButton(
+        tooltip: t('action_add_new_hotel'),
+        onPressed: _addHotel,
+        icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+      ),
+    ]);
+
+    final List<Widget> controls;
+    switch (widget.action) {
+      case _TripAction.hotel:
+        controls = [hotelPicker, const SizedBox(height: 10), mainButton(t('action_house_hotel'), _saveHotel)];
+      case _TripAction.room:
+        controls = [
+          hotelPicker,
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: roomCtrl,
+                decoration: InputDecoration(labelText: t('field_room_number'), isDense: true),
               ),
-              const SizedBox(height: 10),
-              TextField(controller: roomCtrl, decoration: InputDecoration(labelText: t('field_room_number'))),
-              const SizedBox(height: 10),
-              TextField(
+            ),
+            const SizedBox(width: 10),
+            SizedBox(
+              width: 130,
+              child: TextField(
                 controller: capacityCtrl,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: t('room_capacity_label')),
+                decoration: InputDecoration(labelText: t('room_capacity_label'), isDense: true),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: saving ? null : _save,
-                child: saving
-                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(t('action_save')),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          mainButton(t('action_house_room'), _saveRoom),
+        ];
+      case _TripAction.bus:
+        controls = [
+          Row(children: [
+            Expanded(
+              child: DropdownButtonFormField<int>(
+                value: state.bookingBuses.any((b) => b.id == busId) ? busId : null,
+                isExpanded: true,
+                decoration: InputDecoration(labelText: t('bus_word'), isDense: true),
+                items: state.bookingBuses
+                    .map((bus) => DropdownMenuItem(
+                          value: bus.id,
+                          child: Text(bus.company.isEmpty ? bus.number : '${bus.number} — ${bus.company}'),
+                        ))
+                    .toList(),
+                onChanged: (v) => setState(() => busId = v),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// تسكين باص لعدة معتمرين مرة واحدة.
-class _BulkBusSheet extends StatefulWidget {
-  final List<Map<String, dynamic>> bookings;
-  const _BulkBusSheet({required this.bookings});
-
-  @override
-  State<_BulkBusSheet> createState() => _BulkBusSheetState();
-}
-
-class _BulkBusSheetState extends State<_BulkBusSheet> {
-  int? busId;
-  bool saving = false;
-  String? error;
-
-  Future<void> _addNewBus() async {
-    final newId = await showDialog<int>(context: context, builder: (ctx) => const _QuickAddBusDialog());
-    if (newId != null) setState(() => busId = newId);
-  }
-
-  Future<void> _save() async {
-    if (busId == null) return;
-    setState(() {
-      saving = true;
-      error = null;
-    });
-
-    final state = context.read<AppState>();
-    final results = await Future.wait(
-      widget.bookings.map((b) => state.assignBookingBus(b['id'] as int, busId!)),
-    );
-    final errors = results.whereType<String>().toList();
-    final firstError = errors.isNotEmpty ? errors.first : null;
-
-    if (!mounted) return;
-    setState(() => saving = false);
-    if (firstError == null) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() => error = firstError);
+            ),
+            IconButton(
+              tooltip: t('add_bus_title'),
+              onPressed: _addBus,
+              icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          mainButton(t('action_house_bus'), _saveBus),
+        ];
+      case _TripAction.attendance:
+        controls = [
+          Row(children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                onPressed: busy ? null : () => _saveAttendance('present'),
+                icon: const Icon(Icons.check, size: 18),
+                label: Text(t('attendance_present')),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+                onPressed: busy ? null : () => _saveAttendance('absent'),
+                icon: const Icon(Icons.close, size: 18),
+                label: Text(t('attendance_absent')),
+              ),
+            ),
+          ]),
+        ];
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final t = state.t;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+        boxShadow: [BoxShadow(color: Color(0x14000000), blurRadius: 10, offset: Offset(0, -2))],
+      ),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('${t('action_assign_buses')} (${widget.bookings.length})',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              if (error != null) ...[
-                const SizedBox(height: 6),
-                Text(error!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      value: busId,
-                      hint: Text(t('supervisor_none_selected')),
-                      items: state.bookingBuses
-                          .map((bus) => DropdownMenuItem(
-                                value: bus.id,
-                                child: Text(bus.company.isEmpty ? bus.number : '${bus.number} — ${bus.company}'),
-                              ))
-                          .toList(),
-                      onChanged: (v) => setState(() => busId = v),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: t('add_bus_title'),
-                    onPressed: _addNewBus,
-                    icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: saving ? null : _save,
-                child: saving
-                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(t('action_save')),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// تسجيل حضور/غياب لعدة معتمرين مرة واحدة.
-class _BulkAttendanceSheet extends StatefulWidget {
-  final List<Map<String, dynamic>> bookings;
-  const _BulkAttendanceSheet({required this.bookings});
-
-  @override
-  State<_BulkAttendanceSheet> createState() => _BulkAttendanceSheetState();
-}
-
-class _BulkAttendanceSheetState extends State<_BulkAttendanceSheet> {
-  bool saving = false;
-  String? error;
-
-  Future<void> _apply(String status) async {
-    setState(() {
-      saving = true;
-      error = null;
-    });
-
-    final state = context.read<AppState>();
-    final results = await Future.wait(
-      widget.bookings.map((b) => state.markAttendance(b['id'] as int, status)),
-    );
-    final errors = results.whereType<String>().toList();
-    final firstError = errors.isNotEmpty ? errors.first : null;
-
-    if (!mounted) return;
-    setState(() => saving = false);
-    if (firstError == null) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() => error = firstError);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.watch<AppState>().t;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('${t('action_attendance')} (${widget.bookings.length})',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            Text(
+              none
+                  ? t('select_pilgrims_hint')
+                  : '${t('selected_count_prefix')} ${_sel.length} ${t('unit_booking')} · $_people ${t('unit_person')}',
+              style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: none ? AppColors.textMuted : AppColors.primary),
+            ),
             if (error != null) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(error!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
             ],
-            const SizedBox(height: 16),
-            if (saving)
-              const Center(child: CircularProgressIndicator())
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _apply('present'),
-                      icon: const Icon(Icons.check, size: 18),
-                      label: Text(t('attendance_present')),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _apply('absent'),
-                      icon: const Icon(Icons.close, size: 18),
-                      label: Text(t('attendance_absent')),
-                    ),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 8),
+            ...controls,
           ],
         ),
       ),
@@ -1578,6 +1354,89 @@ class _QuickAddBusDialogState extends State<_QuickAddBusDialog> {
               : Text(t('action_save')),
         ),
       ],
+    );
+  }
+}
+
+/// What a trip-level shortcut opens for one departure day.
+enum PilgrimAction { bookings, rooms, hotel, bus, attendance }
+
+/// From a program page: when the trip has more than one departure day in
+/// the next two weeks, first ask which day; then open that day's pilgrims
+/// for [action]. A single-day trip opens straight away.
+Future<void> openPilgrimAction(BuildContext context, ApiTrip trip, PilgrimAction action) async {
+  final days = trip.upcomingDays;
+  String? day;
+  if (days.length > 1) {
+    day = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => _DayPickerSheet(trip: trip),
+    );
+    if (day == null) return; // dismissed
+  } else if (days.length == 1) {
+    day = days.first.date;
+  }
+  if (!context.mounted) return;
+  final Widget screen = switch (action) {
+    PilgrimAction.bookings => TripBookingsScreen(trip: trip, day: day),
+    PilgrimAction.rooms => _ActionSelectionScreen(trip: trip, action: _TripAction.room, initialDay: day),
+    PilgrimAction.hotel => _ActionSelectionScreen(trip: trip, action: _TripAction.hotel, initialDay: day),
+    PilgrimAction.bus => _ActionSelectionScreen(trip: trip, action: _TripAction.bus, initialDay: day),
+    PilgrimAction.attendance => _ActionSelectionScreen(trip: trip, action: _TripAction.attendance, initialDay: day),
+  };
+  Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+}
+
+class _DayPickerSheet extends StatelessWidget {
+  final ApiTrip trip;
+  const _DayPickerSheet({required this.trip});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.watch<AppState>().t;
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(t('choose_departure_day'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              Text(trip.title, style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+              const SizedBox(height: 10),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final d in trip.upcomingDays)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          width: 6,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: d.bookings > 0 ? AppColors.primary : AppColors.border,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                        title: Text(departureDayLabel(context, d.date),
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                        subtitle: Text('${d.bookings} ${t('unit_booking')} · ${d.persons} ${t('unit_person')}'),
+                        trailing: const ForwardChevron(),
+                        onTap: () => Navigator.of(context).pop(d.date),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
