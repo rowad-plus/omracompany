@@ -68,7 +68,6 @@ class _ArrivalsListState extends State<ArrivalsList> {
     final inRooms = _people(_arrivalBookings(s).where((b) => (b['room_number'] ?? '').toString().isNotEmpty));
     if (widget.limit != null) buses = buses.take(widget.limit!).toList();
 
-    String? lastDate;
     return RefreshIndicator(
       onRefresh: s.fetchArrivals,
       child: ListView(
@@ -102,18 +101,15 @@ class _ArrivalsListState extends State<ArrivalsList> {
                 padding: const EdgeInsets.only(top: 30),
                 child: Center(child: Text(t('hm_no_arrivals'), style: const TextStyle(color: AppColors.textSecondary))),
               ),
-            for (final g in buses) ...[
-              if (g['date'] != lastDate) ...[
-                Builder(builder: (context) {
-                  lastDate = g['date'] as String?;
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 12, bottom: 8),
-                    child: Text(lastDate == null ? '—' : departureDayLabel(context, lastDate!),
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textSecondary)),
-                  );
-                }),
-              ],
-              _BusArrivalCard(group: g),
+            for (var i = 0; i < buses.length; i++) ...[
+              // One heading per day (buses come sorted by date).
+              if (i == 0 || buses[i]['date'] != buses[i - 1]['date'])
+                Padding(
+                  padding: const EdgeInsets.only(top: 12, bottom: 8),
+                  child: Text(buses[i]['date'] == null ? '—' : departureDayLabel(context, buses[i]['date'] as String),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.textSecondary)),
+                ),
+              _BusArrivalCard(group: buses[i]),
             ],
           ],
         ],
