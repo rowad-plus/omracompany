@@ -412,7 +412,48 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
                     padding: const EdgeInsets.only(top: 40),
                     child: Center(child: Text(t('no_bookings_yet'), style: const TextStyle(color: AppColors.textSecondary))),
                   )
-                else
+                else ...[
+                  // Bulk pick for hotel / bus / attendance (rooms are small
+                  // hand-picked groups, so no select-all there).
+                  if (widget.action != _TripAction.room)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            tristate: true,
+                            activeColor: AppColors.primary,
+                            value: bookings.every((b) => selected.contains(b['id']))
+                                ? true
+                                : bookings.any((b) => selected.contains(b['id']))
+                                    ? null
+                                    : false,
+                            onChanged: (_) => setState(() {
+                              final all = bookings.every((b) => selected.contains(b['id']));
+                              if (all) {
+                                selected.removeAll(bookings.map((b) => b['id'] as int));
+                              } else {
+                                selected.addAll(bookings.map((b) => b['id'] as int));
+                              }
+                            }),
+                          ),
+                          Expanded(
+                            child: Text('${t('select_all')} (${bookings.length})',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                          ),
+                          if (pending.isNotEmpty && done.isNotEmpty)
+                            TextButton(
+                              onPressed: () => setState(() {
+                                selected
+                                  ..clear()
+                                  ..addAll(pending.map((b) => b['id'] as int));
+                              }),
+                              child: Text('${t('select_pending_only')} (${pending.length})',
+                                  style: const TextStyle(fontSize: 12)),
+                            ),
+                        ],
+                      ),
+                    ),
                   AppCard(
                     child: Column(
                       children: [
@@ -463,6 +504,7 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
                       ],
                     ),
                   ),
+                ],
               ],
             ),
           ),

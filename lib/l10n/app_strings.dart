@@ -2196,6 +2196,16 @@ class AppStrings {
       AppLanguage.tr: 'Otobüse yerleştir', AppLanguage.ur: 'بس میں بٹھائیں',
       AppLanguage.id: 'Tempatkan di bus', AppLanguage.ms: 'Tempatkan dalam bas',
     },
+    'select_all': {
+      AppLanguage.ar: 'تحديد الكل', AppLanguage.en: 'Select all', AppLanguage.fr: 'Tout sélectionner',
+      AppLanguage.tr: 'Tümünü seç', AppLanguage.ur: 'سب منتخب کریں',
+      AppLanguage.id: 'Pilih semua', AppLanguage.ms: 'Pilih semua',
+    },
+    'select_pending_only': {
+      AppLanguage.ar: 'غير المسكّنين فقط', AppLanguage.en: 'Pending only', AppLanguage.fr: 'Non affectés seulement',
+      AppLanguage.tr: 'Sadece bekleyenler', AppLanguage.ur: 'صرف باقی',
+      AppLanguage.id: 'Yang belum saja', AppLanguage.ms: 'Yang belum sahaja',
+    },
     'done_label': {
       AppLanguage.ar: 'تم', AppLanguage.en: 'Done', AppLanguage.fr: 'Fait',
       AppLanguage.tr: 'Tamam', AppLanguage.ur: 'ہو گیا',
