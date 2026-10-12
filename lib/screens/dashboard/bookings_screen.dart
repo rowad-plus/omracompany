@@ -67,25 +67,19 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     child: Center(child: Text(t('no_trips_yet'), style: const TextStyle(color: AppColors.textSecondary))),
                   )
                 else
-                  AppCard(
-                    margin: const EdgeInsets.symmetric(horizontal: 18),
+                  // Each departure day of the next two weeks is its own row:
+                  // "today's trip", "tomorrow's trip", …
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Column(
                       children: [
-                        for (var i = 0; i < trips.length; i++) ...[
-                          if (i > 0) const Divider(height: 29),
-                          InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => TripBookingsScreen(trip: trips[i])),
-                            ),
-                            child: InfoRow(
-                              leading: InitialsAvatar(initials: '🌙', size: 36, imageUrl: trips[i].thumbnail),
-                              title: trips[i].title,
-                              subtitle: '${trips[i].bookingsCount} ${t('bookings_count_suffix')}',
-                              trailing: const ForwardChevron(),
+                        for (final trip in trips)
+                          TripDaysCard(
+                            trip: trip,
+                            onOpen: (day) => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => TripBookingsScreen(trip: trip, day: day)),
                             ),
                           ),
-                        ],
                       ],
                     ),
                   ),
@@ -98,7 +92,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
 /// حجوزات برنامج معيّن — لكل معتمر: تسكين فندق/غرفة، تسكين باص، وحضور.
 class TripBookingsScreen extends StatefulWidget {
   final ApiTrip trip;
-  const TripBookingsScreen({super.key, required this.trip});
+
+  /// Departure day (Y-m-d) this screen is for; null = all days.
+  final String? day;
+  const TripBookingsScreen({super.key, required this.trip, this.day});
 
   @override
   State<TripBookingsScreen> createState() => _TripBookingsScreenState();
@@ -130,13 +127,25 @@ class _TripBookingsScreenState extends State<TripBookingsScreen> {
     final t = state.t;
     final bookings = state.bookingsList.where((b) {
       if (b['trip_id'] != widget.trip.id) return false;
+      if (widget.day != null && b['departure_date'] != widget.day) return false;
       if (query.isEmpty) return true;
-      final name = (b['user'] as Map<String, dynamic>?)?['name'] as String? ?? '';
-      return name.contains(query);
+      final phone = (b['customer_phone'] ?? (b['user'] as Map<String, dynamic>?)?['phone'] ?? '') as String;
+      return bookingName(b).contains(query) || (b['ref'] as String? ?? '').contains(query) || phone.contains(query);
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.trip.title), foregroundColor: AppColors.text),
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.trip.title, style: const TextStyle(fontSize: 16)),
+            if (widget.day != null)
+              Text(departureDayLabel(context, widget.day!),
+                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ],
+        ),
+        foregroundColor: AppColors.text,
+      ),
       body: RefreshIndicator(
         onRefresh: () => context.read<AppState>().fetchBookings(),
         child: state.bookingsLoading && state.bookingsData == null
@@ -155,22 +164,22 @@ class _TripBookingsScreenState extends State<TripBookingsScreen> {
                       _TripActionButton(
                         icon: Icons.apartment_outlined,
                         label: t('action_assign_hotel'),
-                        onTap: () => _openActionSelection(context, widget.trip, _TripAction.hotel),
+                        onTap: () => _openActionSelection(context, widget.trip, _TripAction.hotel, widget.day),
                       ),
                       _TripActionButton(
                         icon: Icons.meeting_room_outlined,
                         label: t('action_assign_room'),
-                        onTap: () => _openActionSelection(context, widget.trip, _TripAction.room),
+                        onTap: () => _openActionSelection(context, widget.trip, _TripAction.room, widget.day),
                       ),
                       _TripActionButton(
                         icon: Icons.directions_bus_outlined,
                         label: t('action_assign_buses'),
-                        onTap: () => _openActionSelection(context, widget.trip, _TripAction.bus),
+                        onTap: () => _openActionSelection(context, widget.trip, _TripAction.bus, widget.day),
                       ),
                       _TripActionButton(
                         icon: Icons.how_to_reg_outlined,
                         label: t('action_attendance'),
-                        onTap: () => _openActionSelection(context, widget.trip, _TripAction.attendance),
+                        onTap: () => _openActionSelection(context, widget.trip, _TripAction.attendance, widget.day),
                       ),
                       _TripActionButton(
                         icon: Icons.location_on_outlined,
@@ -278,9 +287,9 @@ class _BookingRow extends StatelessWidget {
 
 enum _TripAction { hotel, room, bus, attendance }
 
-void _openActionSelection(BuildContext context, ApiTrip trip, _TripAction action) {
+void _openActionSelection(BuildContext context, ApiTrip trip, _TripAction action, [String? day]) {
   Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => _ActionSelectionScreen(trip: trip, action: action)),
+    MaterialPageRoute(builder: (_) => _ActionSelectionScreen(trip: trip, action: action, initialDay: day)),
   );
 }
 
@@ -289,7 +298,8 @@ void _openActionSelection(BuildContext context, ApiTrip trip, _TripAction action
 class _ActionSelectionScreen extends StatefulWidget {
   final ApiTrip trip;
   final _TripAction action;
-  const _ActionSelectionScreen({required this.trip, required this.action});
+  final String? initialDay;
+  const _ActionSelectionScreen({required this.trip, required this.action, this.initialDay});
 
   @override
   State<_ActionSelectionScreen> createState() => _ActionSelectionScreenState();
@@ -301,7 +311,7 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
 
   /// Departure day being worked on — daily/recurring trips must never mix
   /// pilgrims of different days in one room / bus.
-  String? day;
+  late String? day = widget.initialDay;
 
   /// Current hotel / room / bus of a booking, so the list shows who is done.
   String _statusLine(Map<String, dynamic> b, String Function(String) t) {

@@ -10,7 +10,10 @@ import '../../widgets/shared_widgets.dart';
 /// الفعلية لهذه الرحلة (Backend حقيقي).
 class AttendanceScreen extends StatefulWidget {
   final ApiTrip trip;
-  const AttendanceScreen({super.key, required this.trip});
+
+  /// Departure day to open on (from the per-day trip list).
+  final String? initialDay;
+  const AttendanceScreen({super.key, required this.trip, this.initialDay});
 
   @override
   State<AttendanceScreen> createState() => _AttendanceScreenState();
@@ -21,7 +24,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
   /// Chosen departure day (Y-m-d): attendance is per day's bus, not the
   /// whole trip's history.
-  String? day;
+  late String? day = widget.initialDay;
 
   @override
   void initState() {

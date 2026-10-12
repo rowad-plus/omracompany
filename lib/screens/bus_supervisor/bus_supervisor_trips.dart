@@ -37,20 +37,12 @@ class _BusSupervisorTripsState extends State<BusSupervisorTrips> {
                 Text(t('attendance_title'), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
                 Text(t('bs_trips_subtitle'), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 16),
+                // One row per departure day (next two weeks).
                 for (final trip in trips)
-                  AppCard(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => AttendanceScreen(trip: trip)),
-                      ),
-                      child: InfoRow(
-                        leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: trip.thumbnail),
-                        title: trip.title,
-                        subtitle: '${trip.bookingsCount} ${t('unit_seat')}',
-                        trailing: const ForwardChevron(),
-                      ),
+                  TripDaysCard(
+                    trip: trip,
+                    onOpen: (day) => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => AttendanceScreen(trip: trip, initialDay: day)),
                     ),
                   ),
               ],

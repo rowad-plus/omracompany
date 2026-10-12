@@ -28,7 +28,6 @@ class _HotelManagerTripsState extends State<HotelManagerTrips> {
 
     int waitingCountFor(int tripId) =>
         bookings.where((b) => b['trip_id'] == tripId && b['hotel_id'] == null).length;
-    int totalCountFor(int tripId) => bookings.where((b) => b['trip_id'] == tripId).length;
 
     final trips = state.apiTrips.where((tr) => tr.status == 'active').toList()
       ..sort((a, b) => waitingCountFor(b.id).compareTo(waitingCountFor(a.id)));
@@ -49,23 +48,10 @@ class _HotelManagerTripsState extends State<HotelManagerTrips> {
                 Text(t('hm_trips_subtitle'), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 const SizedBox(height: 16),
                 for (final trip in trips)
-                  AppCard(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(10),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => RoomAssignScreen(trip: trip)),
-                      ),
-                      child: InfoRow(
-                        leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: trip.thumbnail),
-                        title: trip.title,
-                        subtitle: totalCountFor(trip.id) == 0
-                            ? t('no_hotel_assigned')
-                            : waitingCountFor(trip.id) == 0
-                                ? t('all_housed')
-                                : '${waitingCountFor(trip.id)} ${t('stat_waiting_housing')}',
-                        trailing: const ForwardChevron(),
-                      ),
+                  TripDaysCard(
+                    trip: trip,
+                    onOpen: (day) => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => RoomAssignScreen(trip: trip, initialDay: day)),
                     ),
                   ),
               ],

@@ -392,3 +392,94 @@ class DepartureDayBar extends StatelessWidget {
     );
   }
 }
+
+/// "اليوم" / "بكرة" / localized weekday + date for a Y-m-d departure day.
+String departureDayLabel(BuildContext context, String ymd) {
+  final d = DateTime.tryParse(ymd);
+  if (d == null) return ymd;
+  final t = context.read<AppState>().t;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final diff = DateTime(d.year, d.month, d.day).difference(today).inDays;
+  final date = '${d.day}/${d.month}';
+  if (diff == 0) return '${t('today')} · $date';
+  if (diff == 1) return '${t('tomorrow')} · $date';
+  final ml = MaterialLocalizations.of(context);
+  // formatMediumDate gives e.g. "الأحد، ١٢ أكتوبر" / "Sun, Oct 12".
+  return ml.formatMediumDate(d);
+}
+
+/// A trip as its own header with one row per departure day underneath —
+/// a daily / recurring trip reads as "today's trip", "tomorrow's trip", …
+/// for the next two weeks. [onOpen] gets the chosen day (null = whole trip,
+/// used when the trip has no days in the window).
+class TripDaysCard extends StatelessWidget {
+  final ApiTrip trip;
+  final void Function(String? day) onOpen;
+  const TripDaysCard({super.key, required this.trip, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.read<AppState>().t;
+    final days = trip.upcomingDays;
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: days.isEmpty ? () => onOpen(null) : null,
+            child: InfoRow(
+              leading: InitialsAvatar(initials: '🌙', size: 34, imageUrl: trip.thumbnail),
+              title: trip.title,
+              subtitle: days.isNotEmpty
+                  ? '${days.length} ${t('departure_day')}'
+                  : trip.daysKnown
+                      ? t('no_days_in_two_weeks')
+                      : '${trip.bookingsCount} ${t('unit_booking')}',
+              trailing: days.isEmpty ? const ForwardChevron() : null,
+            ),
+          ),
+          for (final d in days) ...[
+            const Divider(height: 14, color: AppColors.border),
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => onOpen(d.date),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(start: 8, top: 2, bottom: 2),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: d.bookings > 0 ? AppColors.primary : AppColors.border,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(departureDayLabel(context, d.date),
+                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.text)),
+                          Text('${d.bookings} ${t('unit_booking')} · ${d.persons} ${t('unit_person')}',
+                              style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: d.bookings > 0 ? AppColors.textSecondary : AppColors.textMuted)),
+                        ],
+                      ),
+                    ),
+                    const ForwardChevron(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

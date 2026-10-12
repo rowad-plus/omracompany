@@ -2160,6 +2160,27 @@ class AppStrings {
       AppLanguage.ur: 'آپ کو یہ صفحہ دیکھنے کی اجازت نہیں',
       AppLanguage.id: 'Anda tidak punya izin melihat halaman ini', AppLanguage.ms: 'Anda tiada kebenaran melihat halaman ini',
     },
+    'tomorrow': {
+      AppLanguage.ar: 'بكرة', AppLanguage.en: 'Tomorrow', AppLanguage.fr: 'Demain',
+      AppLanguage.tr: 'Yarın', AppLanguage.ur: 'کل',
+      AppLanguage.id: 'Besok', AppLanguage.ms: 'Esok',
+    },
+    'unit_booking': {
+      AppLanguage.ar: 'حجز', AppLanguage.en: 'bookings', AppLanguage.fr: 'réservations',
+      AppLanguage.tr: 'rezervasyon', AppLanguage.ur: 'بکنگ',
+      AppLanguage.id: 'pemesanan', AppLanguage.ms: 'tempahan',
+    },
+    'unit_person': {
+      AppLanguage.ar: 'فرد', AppLanguage.en: 'people', AppLanguage.fr: 'personnes',
+      AppLanguage.tr: 'kişi', AppLanguage.ur: 'افراد',
+      AppLanguage.id: 'orang', AppLanguage.ms: 'orang',
+    },
+    'no_days_in_two_weeks': {
+      AppLanguage.ar: 'لا توجد مواعيد خلال الأسبوعين القادمين', AppLanguage.en: 'No departures in the next two weeks',
+      AppLanguage.fr: 'Aucun départ dans les deux prochaines semaines', AppLanguage.tr: 'Önümüzdeki iki haftada hareket yok',
+      AppLanguage.ur: 'اگلے دو ہفتوں میں کوئی روانگی نہیں',
+      AppLanguage.id: 'Tidak ada keberangkatan dalam dua minggu ke depan', AppLanguage.ms: 'Tiada perlepasan dalam dua minggu akan datang',
+    },
     'hotel_label': {
       AppLanguage.ar: 'الفندق', AppLanguage.en: 'Hotel', AppLanguage.fr: 'Hôtel',
       AppLanguage.tr: 'Otel', AppLanguage.ur: 'ہوٹل',

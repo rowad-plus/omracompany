@@ -404,6 +404,13 @@ class ApiTrip {
   final double? departureLongitude;
   final String? thumbnail;
 
+  /// Departure days in the next two weeks (server `upcoming_days`), today
+  /// first — a daily/recurring trip is shown as one trip per day.
+  final List<TripDay> upcomingDays;
+
+  /// False when the server doesn't send `upcoming_days` yet (older backend).
+  final bool daysKnown;
+
   const ApiTrip({
     required this.id,
     required this.title,
@@ -429,6 +436,8 @@ class ApiTrip {
     this.departureLatitude,
     this.departureLongitude,
     this.thumbnail,
+    this.upcomingDays = const [],
+    this.daysKnown = false,
   });
 
   static double? _toDoubleOrNull(dynamic v) {
@@ -462,6 +471,24 @@ class ApiTrip {
         departureLatitude: _toDoubleOrNull(j['departure_latitude']),
         departureLongitude: _toDoubleOrNull(j['departure_longitude']),
         thumbnail: j['thumbnail'] as String?,
+        upcomingDays: (j['upcoming_days'] as List<dynamic>? ?? [])
+            .map((e) => TripDay.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        daysKnown: j.containsKey('upcoming_days'),
+      );
+}
+
+/// One departure day of a trip with its active bookings / people.
+class TripDay {
+  final String date; // Y-m-d
+  final int bookings;
+  final int persons;
+  const TripDay({required this.date, this.bookings = 0, this.persons = 0});
+
+  factory TripDay.fromJson(Map<String, dynamic> j) => TripDay(
+        date: j['date'] as String? ?? '',
+        bookings: (j['bookings'] as num?)?.toInt() ?? 0,
+        persons: (j['persons'] as num?)?.toInt() ?? 0,
       );
 }
 

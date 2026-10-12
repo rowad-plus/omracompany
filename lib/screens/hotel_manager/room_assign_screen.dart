@@ -9,7 +9,10 @@ import '../../widgets/shared_widgets.dart';
 /// الفعلية لهذه الرحلة (Backend حقيقي).
 class RoomAssignScreen extends StatefulWidget {
   final ApiTrip trip;
-  const RoomAssignScreen({super.key, required this.trip});
+
+  /// Departure day to open on (from the per-day trip list).
+  final String? initialDay;
+  const RoomAssignScreen({super.key, required this.trip, this.initialDay});
 
   @override
   State<RoomAssignScreen> createState() => _RoomAssignScreenState();
@@ -19,8 +22,8 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
   final Set<int> selected = {};
   String query = '';
 
-  /// Chosen departure day (Y-m-d) — null until the bookings load.
-  String? day;
+  /// Chosen departure day (Y-m-d) — the list's day, else the nearest one.
+  late String? day = widget.initialDay;
 
   @override
   void initState() {
