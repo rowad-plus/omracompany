@@ -299,6 +299,27 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
   final Set<int> selected = {};
   String query = '';
 
+  /// Departure day being worked on — daily/recurring trips must never mix
+  /// pilgrims of different days in one room / bus.
+  String? day;
+
+  /// Current hotel / room / bus of a booking, so the list shows who is done.
+  String _statusLine(Map<String, dynamic> b, String Function(String) t) {
+    final hotel = (b['hotel'] as Map<String, dynamic>?)?['name'] as String?;
+    final room = b['room_number'] as String?;
+    final bus = (b['bus'] as Map<String, dynamic>?)?['bus_number'];
+    switch (widget.action) {
+      case _TripAction.hotel:
+      case _TripAction.room:
+        if (hotel == null) return '';
+        return room == null ? hotel : '$hotel · ${t('room_word')} $room';
+      case _TripAction.bus:
+        return bus == null ? '' : '${t('bus_word')} $bus';
+      case _TripAction.attendance:
+        return '';
+    }
+  }
+
   String _titleFor(String Function(String) t) {
     switch (widget.action) {
       case _TripAction.hotel:
@@ -364,11 +385,17 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final t = state.t;
-    final bookings = state.bookingsList.where((b) {
-      if (b['trip_id'] != widget.trip.id || b['status'] == 'cancelled') return false;
+    final allTrip = state.bookingsList
+        .where((b) => b['trip_id'] == widget.trip.id && b['status'] != 'cancelled')
+        .toList();
+    final days = departureDaysOf(allTrip);
+    final currentDay = days.contains(day) ? day : defaultDepartureDay(days);
+    final dayCounts = {for (final d in days) d: allTrip.where((b) => b['departure_date'] == d).length};
+    final bookings = allTrip.where((b) {
+      if (days.length > 1 && b['departure_date'] != currentDay) return false;
       if (query.isEmpty) return true;
-      final name = (b['user'] as Map<String, dynamic>?)?['name'] as String? ?? '';
-      return name.contains(query);
+      final phone = (b['customer_phone'] ?? (b['user'] as Map<String, dynamic>?)?['phone'] ?? '') as String;
+      return bookingName(b).contains(query) || (b['ref'] as String? ?? '').contains(query) || phone.contains(query);
     }).toList();
 
     return Scaffold(
@@ -381,6 +408,18 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
               children: [
                 Text(widget.trip.title, style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
                 const SizedBox(height: 12),
+                if (days.length > 1) ...[
+                  DepartureDayBar(
+                    days: days,
+                    selected: currentDay,
+                    counts: dayCounts,
+                    onSelect: (d) => setState(() {
+                      day = d;
+                      selected.clear();
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 TextField(
                   onChanged: (v) => setState(() => query = v),
                   decoration: InputDecoration(
@@ -404,10 +443,18 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
                             contentPadding: EdgeInsets.zero,
                             value: selected.contains(bookings[i]['id']),
                             title: Text(
-                              (bookings[i]['user'] as Map<String, dynamic>?)?['name'] as String? ?? '—',
+                              bookingName(bookings[i]),
                               style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
                             ),
-                            subtitle: Text('${bookings[i]['persons_count']} ${t('unit_seat')}', style: const TextStyle(fontSize: 11.5)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(bookingDetails(bookings[i], t('unit_seat')), style: const TextStyle(fontSize: 11.5)),
+                                if (_statusLine(bookings[i], t).isNotEmpty)
+                                  Text(_statusLine(bookings[i], t),
+                                      style: const TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                             onChanged: (v) => setState(() {
                               if (v == true) {
                                 selected.add(bookings[i]['id'] as int);
@@ -528,7 +575,7 @@ class _BulkHotelSheetState extends State<_BulkHotelSheet> {
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       value: hotelId,
-                      decoration: InputDecoration(labelText: t('hotel_mecca_label')),
+                      decoration: InputDecoration(labelText: t('hotel_label')),
                       items: state.bookingHotels.map((h) => DropdownMenuItem(value: h.id, child: Text(h.name))).toList(),
                       onChanged: (v) => setState(() => hotelId = v),
                     ),
@@ -568,19 +615,38 @@ class _BulkRoomSheet extends StatefulWidget {
 
 class _BulkRoomSheetState extends State<_BulkRoomSheet> {
   final roomCtrl = TextEditingController();
+  final capacityCtrl = TextEditingController();
+  int? hotelId;
   bool saving = false;
   String? error;
+
+  /// People in the selected bookings (a booking can be 2-3 persons).
+  int get _people => widget.bookings.fold<int>(0, (n, b) => n + ((b['persons_count'] as num?)?.toInt() ?? 1));
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-pick the hotel when the selected pilgrims already share one, and
+    // keep their room number if they are already in the same room.
+    final hotels = widget.bookings.map((b) => b['hotel_id'] as int?).toSet();
+    if (hotels.length == 1) hotelId = hotels.first;
+    final rooms = widget.bookings.map((b) => b['room_number'] as String?).toSet();
+    if (rooms.length == 1 && rooms.first != null) roomCtrl.text = rooms.first!;
+    capacityCtrl.text = '${_people.clamp(1, 20)}';
+  }
 
   @override
   void dispose() {
     roomCtrl.dispose();
+    capacityCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    final missingHotel = widget.bookings.where((b) => b['hotel_id'] == null);
-    if (missingHotel.isNotEmpty) {
-      setState(() => error = context.read<AppState>().t('assign_hotel_first_hint'));
+    // The hotel is chosen right here (the server houses everyone in the
+    // same hotel + room in one call), so no separate "hotel first" step.
+    if (hotelId == null) {
+      setState(() => error = context.read<AppState>().t('err_select_hotel'));
       return;
     }
     if (roomCtrl.text.trim().isEmpty) {
@@ -596,11 +662,13 @@ class _BulkRoomSheetState extends State<_BulkRoomSheet> {
     final primary = widget.bookings.first;
     final companionIds = widget.bookings.skip(1).map((b) => b['id'] as int).toList();
 
+    final capacity = (int.tryParse(capacityCtrl.text.trim()) ?? _people).clamp(1, 20);
     final result = await context.read<AppState>().assignBookingHotel(
           bookingId: primary['id'] as int,
-          hotelId: primary['hotel_id'] as int,
+          hotelId: hotelId!,
           roomNumber: roomCtrl.text.trim(),
-          roomCapacity: widget.bookings.length,
+          // Room capacity counts PEOPLE, not bookings.
+          roomCapacity: capacity,
           companionIds: companionIds,
         );
 
@@ -615,7 +683,8 @@ class _BulkRoomSheetState extends State<_BulkRoomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final t = context.watch<AppState>().t;
+    final state = context.watch<AppState>();
+    final t = state.t;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
@@ -625,14 +694,27 @@ class _BulkRoomSheetState extends State<_BulkRoomSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('${t('action_assign_room')} (${widget.bookings.length})',
+              Text('${t('action_assign_room')} (${widget.bookings.length} · $_people ${t('unit_seat')})',
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               if (error != null) ...[
                 const SizedBox(height: 6),
                 Text(error!, style: const TextStyle(fontSize: 12, color: AppColors.danger)),
               ],
               const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                value: hotelId,
+                decoration: InputDecoration(labelText: t('hotel_label')),
+                items: state.bookingHotels.map((h) => DropdownMenuItem(value: h.id, child: Text(h.name))).toList(),
+                onChanged: (v) => setState(() => hotelId = v),
+              ),
+              const SizedBox(height: 10),
               TextField(controller: roomCtrl, decoration: InputDecoration(labelText: t('field_room_number'))),
+              const SizedBox(height: 10),
+              TextField(
+                controller: capacityCtrl,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: t('room_capacity_label')),
+              ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: saving ? null : _save,
@@ -1056,7 +1138,7 @@ class _HotelOnlySheetState extends State<_HotelOnlySheet> {
                   Expanded(
                     child: DropdownButtonFormField<int>(
                       value: hotelId,
-                      decoration: InputDecoration(labelText: t('hotel_mecca_label')),
+                      decoration: InputDecoration(labelText: t('hotel_label')),
                       items: state.bookingHotels.map((h) => DropdownMenuItem(value: h.id, child: Text(h.name))).toList(),
                       onChanged: (v) => setState(() => hotelId = v),
                     ),

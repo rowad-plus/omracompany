@@ -245,7 +245,10 @@ class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
           bookingId: ids.first,
           hotelId: hotelId!,
           roomNumber: roomNumber.isEmpty ? null : roomNumber,
-          roomCapacity: ids.length,
+          // Capacity counts PEOPLE (a booking can be 2-3 persons), not bookings.
+          roomCapacity: widget.selectedBookings
+              .fold<int>(0, (n, b) => n + ((b['persons_count'] as num?)?.toInt() ?? 1))
+              .clamp(1, 20),
           companionIds: ids.skip(1).toList(),
         );
 
@@ -287,7 +290,7 @@ class _RoomDetailsSheetState extends State<_RoomDetailsSheet> {
             const SizedBox(height: 14),
             DropdownButtonFormField<int>(
               value: hotelId,
-              decoration: InputDecoration(labelText: t('hotel_mecca_label')),
+              decoration: InputDecoration(labelText: t('hotel_label')),
               items: state.bookingHotels.map((h) => DropdownMenuItem(value: h.id, child: Text(h.name))).toList(),
               onChanged: (v) => setState(() => hotelId = v),
             ),
@@ -320,7 +323,8 @@ class _RoomCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.watch<AppState>().t;
     final first = occupants.first;
-    final capacity = first['room_capacity'] ?? occupants.length;
+    final people = occupants.fold<int>(0, (n, b) => n + ((b['persons_count'] as num?)?.toInt() ?? 1));
+    final capacity = first['room_capacity'] ?? people;
     final hotelName = (first['hotel'] as Map<String, dynamic>?)?['name'] as String? ?? '—';
     final roomNumber = first['room_number'] as String?;
     return AppCard(
@@ -349,7 +353,7 @@ class _RoomCard extends StatelessWidget {
                   ],
                 ),
               ),
-              StatusPill.success('${occupants.length} / $capacity'),
+              StatusPill.success('$people / $capacity'),
             ],
           ),
           const SizedBox(height: 6),

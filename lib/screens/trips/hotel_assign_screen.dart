@@ -66,7 +66,7 @@ class _HotelAssignScreenState extends State<HotelAssignScreen> {
         children: [
           Text(widget.trip.title, style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
           const SizedBox(height: 16),
-          Text(t('hotel_mecca_label'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+          Text(t('hotel_label'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
           const SizedBox(height: 8),
           for (final h in state.apiHotels)
             _hotelOption(h, meccaHotelId, (v) => setState(() => meccaHotelId = v)),

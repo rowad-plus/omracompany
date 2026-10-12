@@ -2160,6 +2160,22 @@ class AppStrings {
       AppLanguage.ur: 'آپ کو یہ صفحہ دیکھنے کی اجازت نہیں',
       AppLanguage.id: 'Anda tidak punya izin melihat halaman ini', AppLanguage.ms: 'Anda tiada kebenaran melihat halaman ini',
     },
+    'hotel_label': {
+      AppLanguage.ar: 'الفندق', AppLanguage.en: 'Hotel', AppLanguage.fr: 'Hôtel',
+      AppLanguage.tr: 'Otel', AppLanguage.ur: 'ہوٹل',
+      AppLanguage.id: 'Hotel', AppLanguage.ms: 'Hotel',
+    },
+    'room_capacity_label': {
+      AppLanguage.ar: 'سعة الغرفة (عدد الأشخاص)', AppLanguage.en: 'Room capacity (people)',
+      AppLanguage.fr: 'Capacité de la chambre (personnes)', AppLanguage.tr: 'Oda kapasitesi (kişi)',
+      AppLanguage.ur: 'کمرے کی گنجائش (افراد)',
+      AppLanguage.id: 'Kapasitas kamar (orang)', AppLanguage.ms: 'Kapasiti bilik (orang)',
+    },
+    'bus_word': {
+      AppLanguage.ar: 'باص', AppLanguage.en: 'Bus', AppLanguage.fr: 'Bus',
+      AppLanguage.tr: 'Otobüs', AppLanguage.ur: 'بس',
+      AppLanguage.id: 'Bus', AppLanguage.ms: 'Bas',
+    },
     'retry': {
       AppLanguage.ar: 'إعادة المحاولة', AppLanguage.en: 'Retry', AppLanguage.fr: 'Réessayer',
       AppLanguage.tr: 'Tekrar dene', AppLanguage.ur: 'دوبارہ کوشش کریں',
