@@ -314,6 +314,14 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
   /// pilgrims of different days in one room / bus.
   late String? day = widget.initialDay;
 
+  /// Whether this booking is already handled for the current action.
+  bool _isDone(Map<String, dynamic> b) => switch (widget.action) {
+        _TripAction.hotel => b['hotel_id'] != null,
+        _TripAction.room => b['hotel_id'] != null && (b['room_number'] ?? '').toString().isNotEmpty,
+        _TripAction.bus => b['bus_id'] != null,
+        _TripAction.attendance => (b['attendance_status'] ?? 'pending') != 'pending',
+      };
+
   /// Current hotel / room / bus of a booking, so the list shows who is done.
   String _statusLine(Map<String, dynamic> b, String Function(String) t) {
     final hotel = (b['hotel'] as Map<String, dynamic>?)?['name'] as String?;
@@ -327,7 +335,8 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
       case _TripAction.bus:
         return bus == null ? '' : '${t('bus_word')} $bus';
       case _TripAction.attendance:
-        return '';
+        final a = b['attendance_status'] as String?;
+        return a == 'present' ? t('attendance_present') : a == 'absent' ? t('attendance_absent') : '';
     }
   }
 
@@ -360,6 +369,13 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
       final phone = (b['customer_phone'] ?? (b['user'] as Map<String, dynamic>?)?['phone'] ?? '') as String;
       return bookingName(b).contains(query) || (b['ref'] as String? ?? '').contains(query) || phone.contains(query);
     }).toList();
+    // Who still needs doing comes first; done ones sink to the bottom.
+    final pending = bookings.where((b) => !_isDone(b)).toList();
+    final done = bookings.where(_isDone).toList();
+    bookings
+      ..clear()
+      ..addAll(pending)
+      ..addAll(done);
 
     return Scaffold(
       appBar: AppBar(title: Text(_titleFor(t)), foregroundColor: AppColors.text),
@@ -403,11 +419,28 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
                         for (var i = 0; i < bookings.length; i++) ...[
                           if (i > 0) const Divider(height: 8),
                           CheckboxListTile(
-                            contentPadding: EdgeInsets.zero,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                            tileColor: _isDone(bookings[i]) ? AppColors.successLight : null,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            activeColor: AppColors.primary,
                             value: selected.contains(bookings[i]['id']),
-                            title: Text(
-                              bookingName(bookings[i]),
-                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    bookingName(bookings[i]),
+                                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                                if (_isDone(bookings[i]))
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                        color: AppColors.success, borderRadius: BorderRadius.circular(20)),
+                                    child: Text('✓ ${t('done_label')}',
+                                        style: const TextStyle(fontSize: 10.5, color: Colors.white, fontWeight: FontWeight.w700)),
+                                  ),
+                              ],
                             ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,7 +448,7 @@ class _ActionSelectionScreenState extends State<_ActionSelectionScreen> {
                                 Text(bookingDetails(bookings[i], t('unit_seat')), style: const TextStyle(fontSize: 11.5)),
                                 if (_statusLine(bookings[i], t).isNotEmpty)
                                   Text(_statusLine(bookings[i], t),
-                                      style: const TextStyle(fontSize: 11.5, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                                      style: const TextStyle(fontSize: 11.5, color: AppColors.success, fontWeight: FontWeight.w700)),
                               ],
                             ),
                             onChanged: (v) => setState(() {

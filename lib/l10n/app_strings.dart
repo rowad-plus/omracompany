@@ -2196,6 +2196,11 @@ class AppStrings {
       AppLanguage.tr: 'Otobüse yerleştir', AppLanguage.ur: 'بس میں بٹھائیں',
       AppLanguage.id: 'Tempatkan di bus', AppLanguage.ms: 'Tempatkan dalam bas',
     },
+    'done_label': {
+      AppLanguage.ar: 'تم', AppLanguage.en: 'Done', AppLanguage.fr: 'Fait',
+      AppLanguage.tr: 'Tamam', AppLanguage.ur: 'ہو گیا',
+      AppLanguage.id: 'Selesai', AppLanguage.ms: 'Selesai',
+    },
     'saved_ok': {
       AppLanguage.ar: 'تم الحفظ', AppLanguage.en: 'Saved', AppLanguage.fr: 'Enregistré',
       AppLanguage.tr: 'Kaydedildi', AppLanguage.ur: 'محفوظ ہو گیا',
