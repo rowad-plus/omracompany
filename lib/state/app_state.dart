@@ -586,6 +586,20 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// "Booking without payment": the company got the money itself → record it
+  /// paid and confirm the booking in one step.
+  Future<String?> markBookingPaid(int id) async {
+    try {
+      await _api.patch('/bookings/$id/mark-paid');
+      await fetchBookings();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تسجيل الدفع';
+    }
+  }
+
   Future<String?> cancelBooking(int id) async {
     try {
       await _api.patch('/bookings/$id/cancel');

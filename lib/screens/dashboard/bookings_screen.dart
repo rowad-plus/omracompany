@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
@@ -816,6 +817,9 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
     final status = b['status'] as String? ?? 'pending';
     final hotelId = b['hotel_id'] as int?;
     final busId = b['bus_id'] as int?;
+    final phone = (b['customer_phone'] ?? (b['user'] as Map<String, dynamic>?)?['phone'] ?? '').toString().trim();
+    final paid = b['payment_status'] == 'paid';
+    final travelers = ((b['travelers'] as List<dynamic>?) ?? []).cast<Map<String, dynamic>>();
 
     return SafeArea(
       child: Padding(
@@ -835,8 +839,80 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
               const SizedBox(height: 2),
               Text(b['total_price'] == null ? '${b['tripTitle']}' : '${b['tripTitle']} · ${b['total_price']} ${b['tripCurrency'] ?? ''}',
                   style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              if (phone.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text(t('booking_contact_label'), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(phone,
+                          textDirection: TextDirection.ltr,
+                          textAlign: TextAlign.start,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    ),
+                    _ContactButton(
+                      icon: Icons.call,
+                      label: t('action_call'),
+                      color: AppColors.primary,
+                      onTap: () => launchUrl(Uri.parse('tel:$phone')),
+                    ),
+                    const SizedBox(width: 8),
+                    _ContactButton(
+                      icon: Icons.chat,
+                      label: t('action_whatsapp'),
+                      color: const Color(0xFF16A34A),
+                      onTap: () => launchUrl(Uri.parse('https://wa.me/${whatsappDigits(phone)}'),
+                          mode: LaunchMode.externalApplication),
+                    ),
+                  ],
+                ),
+              ],
+              if (b['payment_status_label'] != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  '${t('booking_payment_label')}: ${b['payment_status_label']}'
+                  '${b['payment_mode_label'] != null && b['payment_mode_label'] != '—' ? ' · ${b['payment_mode_label']}' : ''}',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: paid ? AppColors.success : const Color(0xFFB45309),
+                  ),
+                ),
+              ],
+              if (travelers.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('${t('booking_pilgrims_label')} (${travelers.length})',
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                for (var i = 0; i < travelers.length; i++)
+                  Text('${i + 1}. ${travelers[i]['name'] ?? '—'}', style: const TextStyle(fontSize: 13)),
+              ],
               const SizedBox(height: 16),
               if (busy) const Center(child: CircularProgressIndicator()) else ...[
+                // Booking without payment: the company collected the money
+                // itself → mark it paid and confirm in one tap.
+                if (status == 'pending' && b['requires_payment'] != true && !paid) ...[
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                    onPressed: () async {
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          content: Text(t('mark_paid_question')),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t('action_cancel'))),
+                            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t('action_confirm'))),
+                          ],
+                        ),
+                      );
+                      if (ok == true) _run(() => state.markBookingPaid(b['id'] as int));
+                    },
+                    icon: const Icon(Icons.payments_outlined, size: 18),
+                    label: Text(t('action_mark_paid_confirm')),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 if (status == 'pending')
                   Row(
                     children: [
@@ -907,6 +983,40 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
                     child: Text(t('action_assign_buses')),
                   ),
               ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// wa.me wants the number in international form, digits only.
+String whatsappDigits(String phone) => phone.replaceAll(RegExp(r'\D'), '').replaceFirst(RegExp(r'^0+'), '');
+
+class _ContactButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _ContactButton({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 17, color: color),
+              const SizedBox(width: 5),
+              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
             ],
           ),
         ),

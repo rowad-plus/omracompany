@@ -670,6 +670,17 @@ class AppStrings {
     },
     'status_pending': {AppLanguage.ar: 'قيد الانتظار', AppLanguage.en: 'Pending'},
     'action_confirm_booking': {AppLanguage.ar: 'تأكيد الحجز', AppLanguage.en: 'Confirm booking'},
+    'action_mark_paid_confirm': {AppLanguage.ar: 'تم الدفع — تأكيد الحجز', AppLanguage.en: 'Paid — confirm booking'},
+    'mark_paid_question': {
+      AppLanguage.ar: 'تأكيد أن العميل دفع المبلغ كاملاً وتأكيد الحجز؟',
+      AppLanguage.en: 'Confirm the customer paid in full and confirm the booking?',
+    },
+    'booking_payment_label': {AppLanguage.ar: 'الدفع', AppLanguage.en: 'Payment'},
+    'booking_contact_label': {AppLanguage.ar: 'التواصل مع العميل', AppLanguage.en: 'Contact the customer'},
+    'action_call': {AppLanguage.ar: 'اتصال', AppLanguage.en: 'Call'},
+    'action_whatsapp': {AppLanguage.ar: 'واتساب', AppLanguage.en: 'WhatsApp'},
+    'booking_pilgrims_label': {AppLanguage.ar: 'المعتمرون', AppLanguage.en: 'Pilgrims'},
+    'action_confirm': {AppLanguage.ar: 'تأكيد', AppLanguage.en: 'Confirm'},
     'action_cancel_booking': {AppLanguage.ar: 'إلغاء الحجز', AppLanguage.en: 'Cancel booking'},
     'action_clear_assignment': {AppLanguage.ar: 'إلغاء التسكين', AppLanguage.en: 'Clear assignment'},
 
