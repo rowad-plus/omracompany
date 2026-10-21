@@ -820,11 +820,27 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
     final phone = (b['customer_phone'] ?? (b['user'] as Map<String, dynamic>?)?['phone'] ?? '').toString().trim();
     final paid = b['payment_status'] == 'paid';
     final travelers = ((b['travelers'] as List<dynamic>?) ?? []).cast<Map<String, dynamic>>();
+    final hotelName = (b['hotel'] as Map<String, dynamic>?)?['name'] as String?;
+    final room = (b['room_number'] ?? '').toString();
+    final busNumber = (b['bus'] as Map<String, dynamic>?)?['bus_number']?.toString();
+    final pill = switch (status) {
+      'confirmed' => StatusPill.success(t('status_confirmed')),
+      'cancelled' => StatusPill.danger(t('status_cancelled')),
+      _ => StatusPill.warning(t('status_pending')),
+    };
+    // RLM around each part keeps the Arabic/Latin pieces in reading order.
+    final meta = [
+      '${b['persons_count'] ?? 1} ${t('unit_person')}',
+      if (b['total_price'] != null) '${b['total_price']} ${b['tripCurrency'] ?? ''}',
+      if (b['departure_date'] != null) b['departure_date'],
+      if (b['ref'] != null) b['ref'],
+    ].map((p) => '‏$p‏').join(' · ');
 
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88),
         child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -832,67 +848,167 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
                 child: Container(
                     width: 36,
                     height: 4,
-                    margin: const EdgeInsets.only(bottom: 14),
+                    margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(10))),
               ),
-              Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(b['total_price'] == null ? '${b['tripTitle']}' : '${b['tripTitle']} · ${b['total_price']} ${b['tripCurrency'] ?? ''}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              // ── Header: who, which trip, status ──
+              Row(
+                children: [
+                  InitialsAvatar(initials: name.isNotEmpty ? name.substring(0, 1) : '؟'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text('${b['tripTitle'] ?? ''}',
+                            style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  pill,
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(meta, style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+              const SizedBox(height: 14),
+
+              // ── Contact ──
               if (phone.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text(t('booking_contact_label'), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Row(
+                _SheetCard(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.phone_iphone, size: 20, color: AppColors.textSecondary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(t('booking_contact_label'),
+                                style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                            const SizedBox(height: 2),
+                            Text(phone,
+                                textDirection: TextDirection.ltr,
+                                style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                      _RoundIconButton(
+                        icon: Icons.call,
+                        tooltip: t('action_call'),
+                        color: AppColors.primary,
+                        onTap: () => launchUrl(Uri.parse('tel:$phone')),
+                      ),
+                      const SizedBox(width: 8),
+                      _RoundIconButton(
+                        icon: Icons.chat,
+                        tooltip: t('action_whatsapp'),
+                        color: const Color(0xFF16A34A),
+                        onTap: () => launchUrl(Uri.parse('https://wa.me/${whatsappDigits(phone)}'),
+                            mode: LaunchMode.externalApplication),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              // ── Payment + pilgrims ──
+              _SheetCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: Text(phone,
-                          textDirection: TextDirection.ltr,
-                          textAlign: TextAlign.start,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    if (b['payment_status_label'] != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.payments_outlined, size: 20, color: AppColors.textSecondary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(t('booking_payment_label'),
+                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                          ),
+                          paid
+                              ? StatusPill.success('${b['payment_status_label']}')
+                              : StatusPill.warning('${b['payment_status_label']}'),
+                        ],
+                      ),
+                    if (b['payment_mode_label'] != null && b['payment_mode_label'] != '—')
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 30, top: 4),
+                        child: Text('${b['payment_mode_label']}',
+                            style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+                      ),
+                    if (travelers.isNotEmpty) ...[
+                      const Divider(height: 22),
+                      Row(
+                        children: [
+                          const Icon(Icons.groups_outlined, size: 20, color: AppColors.textSecondary),
+                          const SizedBox(width: 10),
+                          Text('${t('booking_pilgrims_label')} (${travelers.length})',
+                              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      for (var i = 0; i < travelers.length; i++)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(start: 30, top: 3),
+                          child: Text('${i + 1}. ${travelers[i]['name'] ?? '—'}',
+                              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500)),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // ── Housing: current value + assign / change ──
+              _SheetCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                child: Column(
+                  children: [
+                    _AssignRow(
+                      icon: Icons.apartment_outlined,
+                      label: t('hotel_label'),
+                      value: hotelId != null ? (hotelName ?? '—') : null,
+                      emptyText: t('supervisor_none_selected'),
+                      actionText: hotelId != null ? t('action_change') : t('action_assign'),
+                      onAction: busy ? null : () => _showHotelOnlySheet(context, b),
                     ),
-                    _ContactButton(
-                      icon: Icons.call,
-                      label: t('action_call'),
-                      color: AppColors.primary,
-                      onTap: () => launchUrl(Uri.parse('tel:$phone')),
+                    const Divider(height: 1),
+                    _AssignRow(
+                      icon: Icons.meeting_room_outlined,
+                      label: t('room_word'),
+                      value: room.isNotEmpty
+                          ? '$room${b['room_capacity'] != null ? ' · ${b['room_capacity']} ${t('unit_person')}' : ''}'
+                          : null,
+                      emptyText: t('supervisor_none_selected'),
+                      actionText: room.isNotEmpty ? t('action_change') : t('action_assign'),
+                      onAction: busy || hotelId == null ? null : () => _showRoomOnlySheet(context, b),
+                      onClear: busy || hotelId == null ? null : () => _run(() => state.clearBookingHotel(b['id'] as int)),
                     ),
-                    const SizedBox(width: 8),
-                    _ContactButton(
-                      icon: Icons.chat,
-                      label: t('action_whatsapp'),
-                      color: const Color(0xFF16A34A),
-                      onTap: () => launchUrl(Uri.parse('https://wa.me/${whatsappDigits(phone)}'),
-                          mode: LaunchMode.externalApplication),
+                    const Divider(height: 1),
+                    _AssignRow(
+                      icon: Icons.directions_bus_outlined,
+                      label: t('bus_word'),
+                      value: busId != null ? (busNumber ?? '—') : null,
+                      emptyText: t('supervisor_none_selected'),
+                      actionText: busId != null ? t('action_change') : t('action_assign'),
+                      onAction: busy ? null : () => _showBusAssignSheet(context, b),
+                      onClear: busy || busId == null ? null : () => _run(() => state.clearBookingBus(b['id'] as int)),
                     ),
                   ],
                 ),
-              ],
-              if (b['payment_status_label'] != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  '${t('booking_payment_label')}: ${b['payment_status_label']}'
-                  '${b['payment_mode_label'] != null && b['payment_mode_label'] != '—' ? ' · ${b['payment_mode_label']}' : ''}',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: paid ? AppColors.success : const Color(0xFFB45309),
-                  ),
-                ),
-              ],
-              if (travelers.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text('${t('booking_pilgrims_label')} (${travelers.length})',
-                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                for (var i = 0; i < travelers.length; i++)
-                  Text('${i + 1}. ${travelers[i]['name'] ?? '—'}', style: const TextStyle(fontSize: 13)),
-              ],
-              const SizedBox(height: 16),
-              if (busy) const Center(child: CircularProgressIndicator()) else ...[
+              ),
+
+              // ── Booking decisions (pending only) ──
+              if (busy)
+                const Padding(padding: EdgeInsets.only(top: 18), child: Center(child: CircularProgressIndicator()))
+              else if (status == 'pending') ...[
+                const SizedBox(height: 16),
                 // Booking without payment: the company collected the money
                 // itself → mark it paid and confirm in one tap.
-                if (status == 'pending' && b['requires_payment'] != true && !paid) ...[
+                if (b['requires_payment'] != true && !paid) ...[
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
                     onPressed: () async {
@@ -913,75 +1029,27 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
                   ),
                   const SizedBox(height: 10),
                 ],
-                if (status == 'pending')
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _run(() => state.confirmBooking(b['id'] as int)),
-                          child: Text(t('action_confirm_booking')),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _run(() => state.cancelBooking(b['id'] as int)),
-                          child: Text(t('action_cancel_booking')),
-                        ),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 16),
-                Text(t('action_assign_hotel'), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Text(
-                  hotelId != null ? ((b['hotel'] as Map<String, dynamic>?)?['name'] as String? ?? '—') : t('supervisor_none_selected'),
-                  style: const TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 6),
-                OutlinedButton(
-                  onPressed: () => _showHotelOnlySheet(context, b),
-                  child: Text(t('action_assign_hotel')),
-                ),
-                const SizedBox(height: 16),
-                Text(t('action_assign_room'), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Text(
-                  b['room_number'] != null ? '${b['room_number']} (${b['room_capacity'] ?? '—'})' : t('supervisor_none_selected'),
-                  style: const TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 6),
                 Row(
                   children: [
-                    OutlinedButton(
-                      onPressed: hotelId == null ? null : () => _showRoomOnlySheet(context, b),
-                      child: Text(t('action_assign_room')),
-                    ),
-                    if (hotelId != null) ...[
-                      const SizedBox(width: 10),
-                      TextButton(
-                        onPressed: () => _run(() => state.clearBookingHotel(b['id'] as int)),
-                        child: Text(t('action_clear_assignment')),
+                    Expanded(
+                      child: ElevatedButton(
+                        // Still waiting for the customer's online payment → can't confirm yet.
+                        onPressed: b['requires_payment'] == true
+                            ? null
+                            : () => _run(() => state.confirmBooking(b['id'] as int)),
+                        child: Text(t('action_confirm_booking')),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                        onPressed: () => _run(() => state.cancelBooking(b['id'] as int)),
+                        child: Text(t('action_cancel_booking')),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Text(t('action_assign_buses'), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                if (busId != null)
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: TextButton(
-                      onPressed: () => _run(() => state.clearBookingBus(b['id'] as int)),
-                      child: Text(t('action_clear_assignment')),
-                    ),
-                  )
-                else
-                  OutlinedButton(
-                    onPressed: () => _showBusAssignSheet(context, b),
-                    child: Text(t('action_assign_buses')),
-                  ),
               ],
             ],
           ),
@@ -991,39 +1059,127 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
   }
 }
 
-/// wa.me wants the number in international form, digits only.
-String whatsappDigits(String phone) => phone.replaceAll(RegExp(r'\D'), '').replaceFirst(RegExp(r'^0+'), '');
-
-class _ContactButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  const _ContactButton({required this.icon, required this.label, required this.color, required this.onTap});
+class _SheetCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  const _SheetCard({required this.child, this.padding = const EdgeInsets.all(14)});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 17, color: color),
-              const SizedBox(width: 5),
-              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
-            ],
-          ),
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final Color color;
+  final VoidCallback onTap;
+  const _RoundIconButton({required this.icon, required this.tooltip, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: color.withValues(alpha: 0.12),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(10), child: Icon(icon, size: 20, color: color)),
         ),
       ),
     );
   }
 }
+
+/// One housing line: icon · label / current value · [assign|change] (· clear).
+class _AssignRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? value;
+  final String emptyText;
+  final String actionText;
+  final VoidCallback? onAction;
+  final VoidCallback? onClear;
+  const _AssignRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.emptyText,
+    required this.actionText,
+    required this.onAction,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final done = value != null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: done ? AppColors.primaryLight : AppColors.surface2,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 19, color: done ? AppColors.primary : AppColors.textMuted),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                const SizedBox(height: 2),
+                Text(
+                  value ?? emptyText,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: done ? FontWeight.w700 : FontWeight.w400,
+                    color: done ? AppColors.text : AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (done && onClear != null)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: context.read<AppState>().t('action_clear_assignment'),
+              onPressed: onClear,
+              icon: const Icon(Icons.close, size: 18, color: AppColors.textMuted),
+            ),
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              backgroundColor: done ? Colors.transparent : AppColors.primaryLight,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              minimumSize: const Size(0, 34),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text(actionText, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// wa.me wants the number in international form, digits only.
+String whatsappDigits(String phone) => phone.replaceAll(RegExp(r'\D'), '').replaceFirst(RegExp(r'^0+'), '');
 
 void _showHotelOnlySheet(BuildContext context, Map<String, dynamic> booking) {
   showModalBottomSheet(

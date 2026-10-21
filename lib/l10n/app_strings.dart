@@ -681,6 +681,8 @@ class AppStrings {
     'action_whatsapp': {AppLanguage.ar: 'واتساب', AppLanguage.en: 'WhatsApp'},
     'booking_pilgrims_label': {AppLanguage.ar: 'المعتمرون', AppLanguage.en: 'Pilgrims'},
     'action_confirm': {AppLanguage.ar: 'تأكيد', AppLanguage.en: 'Confirm'},
+    'action_assign': {AppLanguage.ar: 'تعيين', AppLanguage.en: 'Assign'},
+    'action_change': {AppLanguage.ar: 'تغيير', AppLanguage.en: 'Change'},
     'action_cancel_booking': {AppLanguage.ar: 'إلغاء الحجز', AppLanguage.en: 'Cancel booking'},
     'action_clear_assignment': {AppLanguage.ar: 'إلغاء التسكين', AppLanguage.en: 'Clear assignment'},
 
