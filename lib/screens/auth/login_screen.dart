@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../services/location_service.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import 'register_screen.dart';
 
 enum _LoginMode { email, phone }
 
@@ -216,6 +217,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : Text(t('login_button')),
+                  ),
+                  const SizedBox(height: 18),
+                  OutlinedButton.icon(
+                    onPressed: loading
+                        ? null
+                        : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                    icon: const Icon(Icons.storefront_outlined, size: 20),
+                    label: Text(t('reg_cta')),
                   ),
                   const SizedBox(height: 16),
                 ],

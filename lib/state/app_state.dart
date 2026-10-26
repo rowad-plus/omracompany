@@ -85,7 +85,12 @@ class AppState extends ChangeNotifier {
   String accountPhone = '';
   String? companyName;
   String? companyLogo;
+  String? companyStatus;
   Set<String> permissions = {};
+
+  /// Signed up but the company details (step 2) aren't in yet — the app
+  /// shows nothing but that form until they are.
+  bool get needsCompanyDetails => companyStatus == 'incomplete';
 
   /// Every company this account works for (a hotel's housing manager can
   /// serve several). [activeCompanyId] is the one the app works on.
@@ -118,6 +123,7 @@ class AppState extends ChangeNotifier {
     final company = account['company'] as Map<String, dynamic>?;
     companyName = company?['name'] as String?;
     companyLogo = company?['logo'] as String?;
+    companyStatus = company?['status'] as String?;
     permissions = (account['permissions'] as List<dynamic>? ?? []).cast<String>().toSet();
     currentRoles = _rolesFromPermissions(account['role'] as String? ?? '', permissions);
     companies = (account['companies'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
@@ -304,6 +310,74 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// تسجيل شركة جديدة (نفس صفحة "انضم كمقدم خدمة" في الموقع): بيانات المالك
+  /// بس، وبعدها بيدخل على طول والشركة «غير مكتملة» لحد ما يكمّل بياناتها.
+  /// بيرجع null لو نجح، أو رسالة الخطأ.
+  Future<String?> register({
+    required String fullName,
+    String? nationalId,
+    String? email,
+    required String phone,
+    required String password,
+  }) async {
+    try {
+      final res = await _api.post('/register', {
+        'full_name': fullName,
+        if (nationalId != null && nationalId.isNotEmpty) 'national_id': nationalId,
+        if (email != null && email.isNotEmpty) 'email': email,
+        'phone': phone,
+        'password': password,
+        'password_confirmation': password,
+      }) as Map<String, dynamic>;
+      final token = res['token'] as String;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tokenPrefsKey, token);
+
+      _api.setToken(token);
+      _applyAccountPayload(res['account'] as Map<String, dynamic>);
+      isLoggedIn = true;
+      notifyListeners();
+      _registerPush();
+      return null;
+    } on ApiException catch (e) {
+      return e.statusCode == 429 ? 'محاولات كثيرة، حاول مرة أخرى بعد قليل' : e.message;
+    } catch (_) {
+      return 'تعذّر الاتصال بالخادم، تحقق من الإنترنت وحاول مجددًا';
+    }
+  }
+
+  /// الدول والمدن لخطوة بيانات الشركة.
+  Future<Map<String, dynamic>> fetchLocations() async => await _api.get('/locations') as Map<String, dynamic>;
+
+  /// الخطوة التانية من التسجيل: بيانات الشركة، وبعدها الشركة «قيد المراجعة».
+  Future<String?> completeRegistration({
+    required String name,
+    required String commercialRegister,
+    required int cityId,
+    required String address,
+    double? lat,
+    double? lng,
+  }) async {
+    try {
+      await _api.post('/company/complete', {
+        'name': name,
+        'commercial_register': commercialRegister,
+        'city_id': cityId,
+        'address_text': address,
+        if (lat != null) 'latitude': lat,
+        if (lng != null) 'longitude': lng,
+      });
+      _applyAccountPayload(await _api.get('/me') as Map<String, dynamic>);
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر الاتصال بالخادم، تحقق من الإنترنت وحاول مجددًا';
+    }
+  }
+
   /// يسجّل توكن الجهاز على السيرفر عشان توصل إشعارات الحجوزات للهاتف.
   void _registerPush() {
     PushService.instance.register(
@@ -337,6 +411,7 @@ class AppState extends ChangeNotifier {
     accountPhone = '';
     companyName = null;
     companyLogo = null;
+    companyStatus = null;
     bankInfo = null;
     permissions = {};
     employees = [];

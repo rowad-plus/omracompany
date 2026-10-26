@@ -41,6 +41,9 @@ class ApiClient {
   Map<String, String> _headersFor(int? company) => {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        // This build can finish a half-done sign-up (company details step),
+        // so the server lets an «incomplete» company log in.
+        'X-Supports-Registration': '1',
         if (_token != null) 'Authorization': 'Bearer $_token',
         if ((company ?? companyId) != null) 'X-Company-Id': '${company ?? companyId}',
       };

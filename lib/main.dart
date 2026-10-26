@@ -7,6 +7,7 @@ import 'models/models.dart';
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'theme/system_bars.dart';
+import 'screens/auth/complete_registration_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/root_shell.dart';
 import 'screens/notifications/notifications_screen.dart';
@@ -122,9 +123,14 @@ class _AuthGateState extends State<AuthGate> {
     if (!state.isLoggedIn) {
       return LoginScreen(onLoggedIn: () => setState(() {}));
     }
-    return RootShell(onLogout: () async {
+    Future<void> logout() async {
       await context.read<AppState>().logout();
       setState(() {});
-    });
+    }
+
+    if (state.needsCompanyDetails) {
+      return CompleteRegistrationScreen(onLogout: logout);
+    }
+    return RootShell(onLogout: logout);
   }
 }
