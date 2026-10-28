@@ -1451,6 +1451,40 @@ class AppStrings {
       AppLanguage.tr: 'Yeni gün ekle', AppLanguage.ur: 'نیا دن شامل کریں',
       AppLanguage.id: 'Tambah hari baru', AppLanguage.ms: 'Tambah hari baharu',
     },
+    'action_add_activity': {
+      AppLanguage.ar: 'إضافة نشاط جديد', AppLanguage.en: 'Add a new activity', AppLanguage.fr: 'Ajouter une activité',
+      AppLanguage.tr: 'Yeni etkinlik ekle', AppLanguage.ur: 'نئی سرگرمی شامل کریں',
+      AppLanguage.id: 'Tambah aktivitas baru', AppLanguage.ms: 'Tambah aktiviti baharu',
+    },
+    'field_activity': {
+      AppLanguage.ar: 'النشاط', AppLanguage.en: 'Activity', AppLanguage.fr: 'Activité',
+      AppLanguage.tr: 'Etkinlik', AppLanguage.ur: 'سرگرمی',
+      AppLanguage.id: 'Aktivitas', AppLanguage.ms: 'Aktiviti',
+    },
+    'search_city_hint': {
+      AppLanguage.ar: 'ابحث عن مدينة', AppLanguage.en: 'Search for a city', AppLanguage.fr: 'Rechercher une ville',
+      AppLanguage.tr: 'Şehir ara', AppLanguage.ur: 'شہر تلاش کریں',
+      AppLanguage.id: 'Cari kota', AppLanguage.ms: 'Cari bandar',
+    },
+    'search_city_empty': {
+      AppLanguage.ar: 'لا توجد مدينة بهذا الاسم', AppLanguage.en: 'No city matches this name', AppLanguage.fr: 'Aucune ville ne correspond',
+      AppLanguage.tr: 'Bu isimde şehir yok', AppLanguage.ur: 'اس نام کا کوئی شہر نہیں',
+      AppLanguage.id: 'Tidak ada kota dengan nama ini', AppLanguage.ms: 'Tiada bandar dengan nama ini',
+    },
+    'wizard_draft_restored': {
+      AppLanguage.ar: 'رجّعنا البيانات اللي دخلتها آخر مرة — كمّل من حيث وقفت أو عدّل عليها',
+      AppLanguage.en: 'We restored what you entered last time — continue or edit it',
+      AppLanguage.fr: 'Vos données précédentes ont été restaurées — continuez ou modifiez-les',
+      AppLanguage.tr: 'Son girdiğiniz bilgiler geri yüklendi — devam edin veya düzenleyin',
+      AppLanguage.ur: 'پچھلی بار درج کی گئی معلومات بحال کر دی گئیں — جاری رکھیں یا ترمیم کریں',
+      AppLanguage.id: 'Data yang Anda isi sebelumnya dipulihkan — lanjutkan atau ubah',
+      AppLanguage.ms: 'Data yang anda isi sebelum ini dipulihkan — teruskan atau ubah',
+    },
+    'action_start_over': {
+      AppLanguage.ar: 'ابدأ من جديد', AppLanguage.en: 'Start over', AppLanguage.fr: 'Recommencer',
+      AppLanguage.tr: 'Baştan başla', AppLanguage.ur: 'نئے سرے سے شروع کریں',
+      AppLanguage.id: 'Mulai ulang', AppLanguage.ms: 'Mula semula',
+    },
     'mecca_visits_label': {
       AppLanguage.ar: 'مزارات مكة المكرمة', AppLanguage.en: 'Mecca landmarks', AppLanguage.fr: 'Sites de La Mecque',
       AppLanguage.tr: 'Mekke ziyaret yerleri', AppLanguage.ur: 'مکہ کے مقامات',

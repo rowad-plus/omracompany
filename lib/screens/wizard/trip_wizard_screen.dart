@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 
@@ -43,7 +46,7 @@ class TripWizardScreen extends StatefulWidget {
   State<TripWizardScreen> createState() => _TripWizardScreenState();
 }
 
-class _TripWizardScreenState extends State<TripWizardScreen> {
+class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBindingObserver {
   late int step = widget.initialStep;
   bool saving = false;
   bool loadingEditData = false;
@@ -52,13 +55,19 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
 
   bool get isEdit => widget.editingTripId != null;
 
+  // مسودة محلية لبرنامج جديد: لو خرج المستخدم في نص المعالج بنحفظ اللي كتبه
+  // ونرجّعه أول ما يفتح المعالج تاني (الصور مش بتتحفظ).
+  String _draftKey = 'trip_wizard_draft_0';
+  bool draftRestored = false;
+  bool _published = false;
+
   // ----- الخطوة 1: بيانات أساسية -----
   final titleCtrl = TextEditingController();
   int? cityId;
   final departureLocationCtrl = TextEditingController();
   String tripCategory = 'umrah';
   String type = 'economy';
-  String status = 'draft';
+  String status = 'active';
   String scheduleType = 'daily'; // one_time | recurring | daily
   final List<DateTime?> specificDates = [null];
   String recurrenceFrequency = 'weekly';
@@ -124,7 +133,159 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
       _loadEditData();
     } else {
       programs.add(_ProgramDay(1));
+      _draftKey = 'trip_wizard_draft_${context.read<AppState>().activeCompanyId ?? 0}';
+      WidgetsBinding.instance.addObserver(this);
+      _restoreDraft();
     }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState s) {
+    if (s == AppLifecycleState.paused || s == AppLifecycleState.inactive) _saveDraft();
+  }
+
+  Map<String, dynamic> _draftData() => {
+        'step': step,
+        'title': titleCtrl.text,
+        'city_id': cityId,
+        'departure_location': departureLocationCtrl.text,
+        'trip_category': tripCategory,
+        'type': type,
+        'status': status,
+        'schedule_type': scheduleType,
+        'specific_dates': specificDates.map((d) => d?.toIso8601String()).toList(),
+        'recurrence_frequency': recurrenceFrequency,
+        'recurrence_day_of_week': recurrenceDayOfWeek,
+        'recurrence_day_of_month': recurrenceDayOfMonth,
+        'dest_mode': destMode,
+        'dest_order': destOrder,
+        'duration': durationCtrl.text,
+        'makkah_days': makkahDaysCtrl.text,
+        'madinah_days': madinahDaysCtrl.text,
+        'seats': seatsCtrl.text,
+        'price': priceCtrl.text,
+        'family_prices': [for (final f in familyPrices) {'persons': f.personsCtrl.text, 'price': f.priceCtrl.text}],
+        'hotel_name': hotelNameCtrl.text,
+        'hotel_stars': hotelStars,
+        'hotel_location': hotelLocationCtrl.text,
+        'distance': distanceCtrl.text,
+        'hotel_name_madinah': hotelNameMadinahCtrl.text,
+        'hotel_stars_madinah': hotelStarsMadinah,
+        'hotel_location_madinah': hotelLocationMadinahCtrl.text,
+        'distance_madinah': distanceMadinahCtrl.text,
+        'rooms': [roomsSingleCtrl.text, roomsDoubleCtrl.text, roomsTripleCtrl.text, roomsQuadCtrl.text],
+        'programs': [
+          for (final p in programs)
+            {'day': p.dayNumber, 'title': p.titleCtrl.text, 'location': p.locationCtrl.text, 'steps': p.stepCtrls.map((c) => c.text).toList()},
+        ],
+        'has_guide': hasGuide,
+        'has_visits': hasVisits,
+        'included': includedServices,
+        'excluded': excludedServices,
+        'ziyarat': ziyarat,
+        'description': descriptionCtrl.text,
+      };
+
+  bool get _hasInput =>
+      titleCtrl.text.trim().isNotEmpty ||
+      cityId != null ||
+      durationCtrl.text.trim().isNotEmpty ||
+      priceCtrl.text.trim().isNotEmpty ||
+      programs.any((p) => p.titleCtrl.text.trim().isNotEmpty);
+
+  /// Builds the snapshot synchronously (controllers may be disposed right after).
+  void _saveDraft() {
+    if (isEdit || _published) return;
+    final raw = _hasInput ? jsonEncode(_draftData()) : null;
+    SharedPreferences.getInstance().then((p) => raw == null ? p.remove(_draftKey) : p.setString(_draftKey, raw));
+  }
+
+  Future<void> _clearDraft() async => (await SharedPreferences.getInstance()).remove(_draftKey);
+
+  Future<void> _restoreDraft() async {
+    final raw = (await SharedPreferences.getInstance()).getString(_draftKey);
+    if (raw == null || !mounted) return;
+    final Map<String, dynamic> d;
+    try {
+      d = jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return;
+    }
+    String s(String k) => d[k] as String? ?? '';
+    setState(() {
+      draftRestored = true;
+      step = (d['step'] as int? ?? 0).clamp(0, stepTitleKeys.length - 1);
+      titleCtrl.text = s('title');
+      cityId = d['city_id'] as int?;
+      departureLocationCtrl.text = s('departure_location');
+      tripCategory = d['trip_category'] as String? ?? tripCategory;
+      type = d['type'] as String? ?? type;
+      status = d['status'] as String? ?? status;
+      scheduleType = d['schedule_type'] as String? ?? scheduleType;
+      final dates = (d['specific_dates'] as List<dynamic>? ?? []).map((e) => e == null ? null : DateTime.tryParse(e as String)).toList();
+      if (dates.isNotEmpty) {
+        specificDates
+          ..clear()
+          ..addAll(dates);
+      }
+      recurrenceFrequency = d['recurrence_frequency'] as String? ?? recurrenceFrequency;
+      recurrenceDayOfWeek = d['recurrence_day_of_week'] as int? ?? recurrenceDayOfWeek;
+      recurrenceDayOfMonth = d['recurrence_day_of_month'] as int? ?? recurrenceDayOfMonth;
+      destMode = d['dest_mode'] as String? ?? destMode;
+      destOrder = d['dest_order'] as String? ?? destOrder;
+      durationCtrl.text = s('duration');
+      makkahDaysCtrl.text = s('makkah_days');
+      madinahDaysCtrl.text = s('madinah_days');
+      seatsCtrl.text = s('seats');
+      priceCtrl.text = s('price');
+      for (final f in (d['family_prices'] as List<dynamic>? ?? [])) {
+        final row = _FamilyPriceRow();
+        row.personsCtrl.text = f['persons'] as String? ?? '';
+        row.priceCtrl.text = f['price'] as String? ?? '';
+        familyPrices.add(row);
+      }
+      hotelNameCtrl.text = s('hotel_name');
+      hotelStars = d['hotel_stars'] as int? ?? hotelStars;
+      hotelLocationCtrl.text = s('hotel_location');
+      distanceCtrl.text = s('distance');
+      hotelNameMadinahCtrl.text = s('hotel_name_madinah');
+      hotelStarsMadinah = d['hotel_stars_madinah'] as int? ?? hotelStarsMadinah;
+      hotelLocationMadinahCtrl.text = s('hotel_location_madinah');
+      distanceMadinahCtrl.text = s('distance_madinah');
+      final rooms = (d['rooms'] as List<dynamic>? ?? []).cast<String>();
+      final roomCtrls = [roomsSingleCtrl, roomsDoubleCtrl, roomsTripleCtrl, roomsQuadCtrl];
+      for (var i = 0; i < rooms.length && i < roomCtrls.length; i++) {
+        roomCtrls[i].text = rooms[i];
+      }
+      final days = d['programs'] as List<dynamic>? ?? [];
+      if (days.isNotEmpty) {
+        for (final p in programs) {
+          p.dispose();
+        }
+        programs.clear();
+        for (final p in days) {
+          final day = _ProgramDay(p['day'] as int? ?? programs.length + 1);
+          day.titleCtrl.text = p['title'] as String? ?? '';
+          day.locationCtrl.text = p['location'] as String? ?? '';
+          final steps = (p['steps'] as List<dynamic>? ?? []).cast<String>();
+          day.stepCtrls = steps.isEmpty ? [TextEditingController()] : steps.map((x) => TextEditingController(text: x)).toList();
+          programs.add(day);
+        }
+      }
+      hasGuide = d['has_guide'] as bool? ?? hasGuide;
+      hasVisits = d['has_visits'] as bool? ?? hasVisits;
+      includedServices.addAll((d['included'] as List<dynamic>? ?? []).cast<String>());
+      excludedServices.addAll((d['excluded'] as List<dynamic>? ?? []).cast<String>());
+      ziyarat.addAll((d['ziyarat'] as List<dynamic>? ?? []).cast<String>());
+      descriptionCtrl.text = s('description');
+    });
+  }
+
+  Future<void> _startOver() async {
+    await _clearDraft();
+    _published = true; // don't re-save this screen's data on dispose
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const TripWizardScreen()));
   }
 
   Future<void> _loadEditData() async {
@@ -207,6 +368,10 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
 
   @override
   void dispose() {
+    if (!isEdit) {
+      _saveDraft();
+      WidgetsBinding.instance.removeObserver(this);
+    }
     titleCtrl.dispose();
     departureLocationCtrl.dispose();
     durationCtrl.dispose();
@@ -253,12 +418,16 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
     setState(() => error = null);
     if (step < stepTitleKeys.length - 1) {
       setState(() => step++);
+      _saveDraft();
     } else {
       _submit();
     }
   }
 
-  void _prev() => setState(() => step = (step - 1).clamp(0, stepTitleKeys.length - 1));
+  void _prev() {
+    setState(() => step = (step - 1).clamp(0, stepTitleKeys.length - 1));
+    _saveDraft();
+  }
 
   Future<void> _pickImages() async {
     final picked = await _picker.pickMultiImage(imageQuality: 80);
@@ -345,6 +514,11 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
     setState(() => saving = false);
 
     if (result == null) {
+      if (!isEdit) {
+        _published = true;
+        await _clearDraft();
+      }
+      if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isEdit ? t('wizard_updated_snackbar') : t('wizard_published_snackbar'))));
     } else {
@@ -382,6 +556,22 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
                     ],
                   ),
                 ),
+                if (draftRestored)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                      decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(10)),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.restore, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(t('wizard_draft_restored'), style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary))),
+                          TextButton(onPressed: saving ? null : _startOver, child: Text(t('action_start_over'), style: const TextStyle(fontSize: 12))),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (error != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -466,12 +656,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
       children: [
         TextField(controller: titleCtrl, decoration: InputDecoration(labelText: t('field_program_name'))),
         const SizedBox(height: 14),
-        DropdownButtonFormField<int>(
-          value: cityId,
-          decoration: InputDecoration(labelText: t('field_departure_city')),
-          items: state.tripFormCities.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-          onChanged: (v) => setState(() => cityId = v),
-        ),
+        _cityField(state.tripFormCities),
         const SizedBox(height: 8),
         Text(t('wizard_departure_location_hint'), style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
         const SizedBox(height: 8),
@@ -514,8 +699,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
           value: status,
           decoration: InputDecoration(labelText: t('field_status')),
           items: [
-            DropdownMenuItem(value: 'draft', child: Text(t('status_draft'))),
             DropdownMenuItem(value: 'active', child: Text(t('status_active'))),
+            DropdownMenuItem(value: 'draft', child: Text(t('status_draft'))),
             DropdownMenuItem(value: 'inactive', child: Text(t('status_stopped'))),
           ],
           onChanged: (v) => setState(() => status = v ?? status),
@@ -598,6 +783,79 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
         ),
       ],
     );
+  }
+
+  /// Arabic-insensitive key for sorting/searching city names (أ/إ/آ→ا، ة→ه، ى→ي).
+  static String _cityKey(String s) => s
+      .trim()
+      .replaceAll(RegExp('[أإآ]'), 'ا')
+      .replaceAll('ة', 'ه')
+      .replaceAll('ى', 'ي')
+      .replaceAll(RegExp(r'^ال'), '')
+      .toLowerCase();
+
+  /// مدينة الانطلاق: قائمة مرتبة أبجديًا مع بحث، بدل القائمة المنسدلة الطويلة.
+  Widget _cityField(List<SaudiCity> cities) {
+    final selected = cities.where((c) => c.id == cityId).firstOrNull;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _pickCity(cities),
+      child: InputDecorator(
+        isEmpty: selected == null,
+        decoration: InputDecoration(labelText: t('field_departure_city'), suffixIcon: const Icon(Icons.arrow_drop_down)),
+        child: Text(selected?.name ?? ''),
+      ),
+    );
+  }
+
+  Future<void> _pickCity(List<SaudiCity> cities) async {
+    final sorted = [...cities]..sort((a, b) => _cityKey(a.name).compareTo(_cityKey(b.name)));
+    final searchHint = context.read<AppState>().t('search_city_hint');
+    final emptyText = context.read<AppState>().t('search_city_empty');
+    final picked = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+      builder: (ctx) {
+        var query = '';
+        return StatefulBuilder(builder: (ctx, setSheet) {
+          final q = _cityKey(query);
+          final list = q.isEmpty ? sorted : sorted.where((c) => _cityKey(c.name).contains(q)).toList();
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: SizedBox(
+              height: MediaQuery.of(ctx).size.height * 0.75,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(hintText: searchHint, prefixIcon: const Icon(Icons.search)),
+                      onChanged: (v) => setSheet(() => query = v),
+                    ),
+                  ),
+                  Expanded(
+                    child: list.isEmpty
+                        ? Center(child: Text(emptyText, style: const TextStyle(color: AppColors.textMuted)))
+                        : ListView.builder(
+                            itemCount: list.length,
+                            itemBuilder: (_, i) => ListTile(
+                              title: Text(list[i].name),
+                              trailing: list[i].id == cityId ? const Icon(Icons.check, color: AppColors.primary) : null,
+                              onTap: () => Navigator.of(ctx).pop(list[i].id),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+    if (picked != null && mounted) setState(() => cityId = picked);
   }
 
   /// Compares a private-room row with the shared-room price for the same
@@ -816,7 +1074,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
                         Expanded(
                           child: TextField(
                             controller: programs[di].stepCtrls[si],
-                            decoration: InputDecoration(labelText: t('field_day_activities')),
+                            decoration: InputDecoration(
+                                labelText: programs[di].stepCtrls.length > 1 ? '${t('field_activity')} ${si + 1}' : t('field_day_activities')),
                           ),
                         ),
                         if (programs[di].stepCtrls.length > 1)
@@ -835,7 +1094,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> {
                   child: TextButton.icon(
                     onPressed: () => setState(() => programs[di].stepCtrls.add(TextEditingController())),
                     icon: const Icon(Icons.add, size: 16),
-                    label: Text(t('action_add_new_day')),
+                    label: Text(t('action_add_activity')),
                   ),
                 ),
               ],
