@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -77,7 +78,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   /// Saudi companies only: 'visit' (Madinah day trip, no nights) or 'overnight'.
   String madinahStay = 'overnight';
   /// '32' | '49' passengers, or null (not chosen).
-  String? busType;
+  String? busType = '49'; // new trips start economy -> 49 seats
   bool get _madinahVisit => destMode == 'makkah_madinah' && madinahStay == 'visit';
   String destOrder = 'makkah_first';
   final durationCtrl = TextEditingController();
@@ -133,7 +134,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   @override
   void initState() {
     super.initState();
-    context.read<AppState>().fetchTripFormOptions();
+    final optionsLoaded = context.read<AppState>().fetchTripFormOptions();
     if (isEdit) {
       _loadEditData();
     } else {
@@ -141,7 +142,46 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       _draftKey = 'trip_wizard_draft_${context.read<AppState>().activeCompanyId ?? 0}';
       WidgetsBinding.instance.addObserver(this);
       _restoreDraft();
+      optionsLoaded.then((_) => _preselectDepartureCity());
     }
+  }
+
+  /// New trip with no city yet: the company's own city right away, then the
+  /// city nearest to the phone's location if location is allowed.
+  Future<void> _preselectDepartureCity() async {
+    if (!mounted || cityId != null) return;
+    final state = context.read<AppState>();
+    final cities = state.tripFormCities;
+    if (cities.isEmpty) return;
+    final own = state.tripFormDefaultCityId;
+    if (own != null && cities.any((c) => c.id == own)) {
+      setState(() => cityId = own);
+    }
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return;
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) return;
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low, timeLimit: Duration(seconds: 10)),
+      );
+      SaudiCity? best;
+      var bestD = double.infinity;
+      for (final c in cities) {
+        if (c.lat == null || c.lng == null) continue;
+        final d = Geolocator.distanceBetween(pos.latitude, pos.longitude, c.lat!, c.lng!);
+        if (d < bestD) {
+          bestD = d;
+          best = c;
+        }
+      }
+      // Only when the phone is really near one of the cities (150 km).
+      if (best != null && bestD < 150000 && mounted && (cityId == null || cityId == own)) {
+        setState(() => cityId = best!.id);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -241,7 +281,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       destMode = d['dest_mode'] as String? ?? destMode;
       destOrder = d['dest_order'] as String? ?? destOrder;
       madinahStay = d['madinah_stay'] as String? ?? madinahStay;
-      busType = d['bus_type'] as String?;
+      busType = d['bus_type'] as String? ?? busType;
       durationCtrl.text = s('duration');
       makkahDaysCtrl.text = s('makkah_days');
       madinahDaysCtrl.text = s('madinah_days');
@@ -480,7 +520,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       'departure_city_id': cityId,
       if (departureLocationCtrl.text.trim().isNotEmpty) 'departure_location': departureLocationCtrl.text.trim(),
       'title': titleCtrl.text.trim(),
-      'trip_category': tripCategory,
+      'trip_category': context.read<AppState>().companyIsSaudi ? 'umrah' : tripCategory,
       'type': type,
       'status': status,
       'schedule_type': scheduleType,
@@ -710,6 +750,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         const SizedBox(height: 14),
         Row(
           children: [
+            // Saudi companies: every program is umrah, so no choice here.
+            if (!context.watch<AppState>().companyIsSaudi) ...[
             Expanded(
               child: DropdownButtonFormField<String>(
                 value: tripCategory,
@@ -723,6 +765,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
               ),
             ),
             const SizedBox(width: 10),
+            ],
             Expanded(
               child: DropdownButtonFormField<String>(
                 value: type,
@@ -732,7 +775,11 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
                   DropdownMenuItem(value: 'premium', child: Text(t('tier_premium'))),
                   DropdownMenuItem(value: 'vip', child: Text(t('opt_luxury_vip'))),
                 ],
-                onChanged: (v) => setState(() => type = v ?? type),
+                // Tier sets the usual bus (VIP 32, economy / premium 49); still editable.
+                onChanged: (v) => setState(() {
+                  type = v ?? type;
+                  busType = type == 'vip' ? '32' : '49';
+                }),
               ),
             ),
           ],

@@ -1519,6 +1519,8 @@ class AppState extends ChangeNotifier {
 
   // ------- خيارات نموذج إنشاء البرنامج (Backend حقيقي) -------
   List<SaudiCity> tripFormCities = [];
+  /// The company's own city: preselected as departure city on a new trip.
+  int? tripFormDefaultCityId;
   List<AssignableHotel> tripFormHotels = [];
   List<AssignableBus> tripFormBuses = [];
   bool tripFormOptionsLoading = false;
@@ -1529,6 +1531,7 @@ class AppState extends ChangeNotifier {
     try {
       final res = await _api.get('/umrah-trips-form-options') as Map<String, dynamic>;
       tripFormCities = (res['cities'] as List<dynamic>).map((e) => SaudiCity.fromJson(e as Map<String, dynamic>)).toList();
+      tripFormDefaultCityId = (res['default_city_id'] as num?)?.toInt();
       tripFormHotels = (res['hotels'] as List<dynamic>).map((e) => AssignableHotel.fromJson(e as Map<String, dynamic>)).toList();
       tripFormBuses = (res['buses'] as List<dynamic>).map((e) => AssignableBus.fromJson(e as Map<String, dynamic>)).toList();
     } finally {

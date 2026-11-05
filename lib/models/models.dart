@@ -139,10 +139,16 @@ class AppNotification {
 class SaudiCity {
   final int id;
   final String name;
-  const SaudiCity({required this.id, required this.name});
+  final double? lat;
+  final double? lng;
+  const SaudiCity({required this.id, required this.name, this.lat, this.lng});
 
-  factory SaudiCity.fromJson(Map<String, dynamic> j) =>
-      SaudiCity(id: j['id'] as int, name: j['name'] as String? ?? '');
+  factory SaudiCity.fromJson(Map<String, dynamic> j) => SaudiCity(
+        id: j['id'] as int,
+        name: j['name'] as String? ?? '',
+        lat: (j['lat'] as num?)?.toDouble(),
+        lng: (j['lng'] as num?)?.toDouble(),
+      );
 }
 
 /// فندق متعاقد معه فعليًا في شاشة "الفنادق والإقامة" (Backend حقيقي).
