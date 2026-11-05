@@ -89,6 +89,9 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   // ----- الخطوة 2: التسعير -----
   final priceCtrl = TextEditingController();
   final List<_FamilyPriceRow> familyPrices = [];
+  // Saudi only: one-way prices per person, SAR, no stay.
+  final priceGoOnlyCtrl = TextEditingController();
+  final priceReturnOnlyCtrl = TextEditingController();
 
   // ----- الخطوة 3: الفندق والغرف -----
   final hotelNameCtrl = TextEditingController();
@@ -125,7 +128,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   static const stepTitleKeys = [
     'step1_title',
     'step2_title',
-    'wizard_step_hotel',
+    // No hotel step: hotels are set later from the trip's "تعيين الفندق".
     'step3_title',
     'wizard_step_services',
     'wizard_step_images',
@@ -211,6 +214,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         'madinah_days': madinahDaysCtrl.text,
         'seats': seatsCtrl.text,
         'price': priceCtrl.text,
+        'price_go_only': priceGoOnlyCtrl.text,
+        'price_return_only': priceReturnOnlyCtrl.text,
         'family_prices': [for (final f in familyPrices) {'persons': f.personsCtrl.text, 'price': f.priceCtrl.text}],
         'hotel_name': hotelNameCtrl.text,
         'hotel_stars': hotelStars,
@@ -287,6 +292,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       madinahDaysCtrl.text = s('madinah_days');
       seatsCtrl.text = s('seats');
       priceCtrl.text = s('price');
+      priceGoOnlyCtrl.text = s('price_go_only');
+      priceReturnOnlyCtrl.text = s('price_return_only');
       for (final f in (d['family_prices'] as List<dynamic>? ?? [])) {
         final row = _FamilyPriceRow();
         row.personsCtrl.text = f['persons'] as String? ?? '';
@@ -370,6 +377,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       seatsCtrl.text = '${data['total_seats'] ?? ''}';
 
       priceCtrl.text = '${data['price'] ?? ''}';
+      priceGoOnlyCtrl.text = data['price_go_only'] == null ? '' : '${data['price_go_only']}'.replaceAll(RegExp(r'\.0+$'), '');
+      priceReturnOnlyCtrl.text = data['price_return_only'] == null ? '' : '${data['price_return_only']}'.replaceAll(RegExp(r'\.0+$'), '');
       final prices = (data['family_prices'] as List<dynamic>? ?? []);
       for (final p in prices) {
         final row = _FamilyPriceRow();
@@ -431,6 +440,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
     madinahDaysCtrl.dispose();
     seatsCtrl.dispose();
     priceCtrl.dispose();
+    priceGoOnlyCtrl.dispose();
+    priceReturnOnlyCtrl.dispose();
     hotelNameCtrl.dispose();
     hotelLocationCtrl.dispose();
     distanceCtrl.dispose();
@@ -525,6 +536,10 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       'status': status,
       'schedule_type': scheduleType,
       'price': double.tryParse(priceCtrl.text.trim()) ?? 0,
+      if (context.read<AppState>().companyIsSaudi) ...{
+        'price_go_only': double.tryParse(priceGoOnlyCtrl.text.trim()),
+        'price_return_only': double.tryParse(priceReturnOnlyCtrl.text.trim()),
+      },
       // Duration = Makkah days + Madinah nights (none for a Madinah day visit).
       'duration_days': _totalDays,
       'dest_mode': destMode,
@@ -723,10 +738,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       case 1:
         return _stepPricing();
       case 2:
-        return _stepHotel();
-      case 3:
         return _stepProgram();
-      case 4:
+      case 3:
         return _stepServices();
       default:
         return _stepImages();
@@ -1027,10 +1040,30 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
           icon: const Icon(Icons.add, size: 18),
           label: Text(t('action_add_family_pricing')),
         ),
+        if (context.watch<AppState>().companyIsSaudi) ...[
+          const SizedBox(height: 22),
+          Text(t('one_way_prices_label'),
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+          const SizedBox(height: 4),
+          Text(t('one_way_prices_hint'), style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+          const SizedBox(height: 10),
+          TextField(
+            controller: priceGoOnlyCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: t('field_price_go_only'), suffixText: 'ر.س'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: priceReturnOnlyCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: t('field_price_return_only'), suffixText: 'ر.س'),
+          ),
+        ],
       ],
     );
   }
 
+  // ignore: unused_element
   Widget _stepHotel() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -1604,6 +1604,26 @@ class AppStrings {
       AppLanguage.tr: 'Ayrıntılı açıklama', AppLanguage.ur: 'تفصیلی تفصیل',
       AppLanguage.id: 'Deskripsi lengkap', AppLanguage.ms: 'Penerangan terperinci',
     },
+    'one_way_prices_label': {
+      AppLanguage.ar: 'أسعار اتجاه واحد (اختياري)', AppLanguage.en: 'One-way prices (optional)', AppLanguage.fr: 'Prix aller simple (facultatif)',
+      AppLanguage.tr: 'Tek yön fiyatları (isteğe bağlı)', AppLanguage.ur: 'یک طرفہ قیمتیں (اختیاری)',
+      AppLanguage.id: 'Harga sekali jalan (opsional)', AppLanguage.ms: 'Harga sehala (pilihan)',
+    },
+    'one_way_prices_hint': {
+      AppLanguage.ar: 'للفرد بالريال، بدون إقامة', AppLanguage.en: 'Per person in SAR, no stay', AppLanguage.fr: 'Par personne en SAR, sans séjour',
+      AppLanguage.tr: 'Kişi başı SAR, konaklamasız', AppLanguage.ur: 'فی کس ریال میں، بغیر قیام',
+      AppLanguage.id: 'Per orang dalam SAR, tanpa menginap', AppLanguage.ms: 'Seorang dalam SAR, tanpa penginapan',
+    },
+    'field_price_go_only': {
+      AppLanguage.ar: 'سعر الذهاب فقط (باص بدون إقامة)', AppLanguage.en: 'Going only price (bus, no stay)', AppLanguage.fr: 'Prix aller seulement (bus, sans séjour)',
+      AppLanguage.tr: 'Sadece gidiş fiyatı (otobüs, konaklamasız)', AppLanguage.ur: 'صرف جانے کی قیمت (بس، بغیر قیام)',
+      AppLanguage.id: 'Harga berangkat saja (bus, tanpa menginap)', AppLanguage.ms: 'Harga pergi sahaja (bas, tanpa penginapan)',
+    },
+    'field_price_return_only': {
+      AppLanguage.ar: 'سعر الرجوع من مكة', AppLanguage.en: 'Return from Makkah price', AppLanguage.fr: 'Prix retour de La Mecque',
+      AppLanguage.tr: 'Mekke dönüş fiyatı', AppLanguage.ur: 'مکہ سے واپسی کی قیمت',
+      AppLanguage.id: 'Harga pulang dari Makkah', AppLanguage.ms: 'Harga pulang dari Mekah',
+    },
     'upload_video': {
       AppLanguage.ar: 'رفع فيديو للرحلة', AppLanguage.en: 'Upload a trip video', AppLanguage.fr: 'Ajouter une vidéo du voyage',
       AppLanguage.tr: 'Gezi videosu yükle', AppLanguage.ur: 'سفر کی ویڈیو اپ لوڈ کریں',
