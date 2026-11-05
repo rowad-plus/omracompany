@@ -314,7 +314,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       departureLocationCtrl.text = data['departure_location'] as String? ?? '';
       tripCategory = data['trip_category'] as String? ?? 'umrah';
       type = data['type'] as String? ?? 'economy';
-      status = data['status'] as String? ?? 'draft';
+      status = data['status'] as String? ?? 'active';
       scheduleType = data['schedule_type'] as String? ?? 'daily';
       recurrenceFrequency = data['recurrence_frequency'] as String? ?? 'weekly';
       recurrenceDayOfWeek = data['recurrence_day_of_week'] as int? ?? 0;
@@ -416,9 +416,17 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
 
   String t(String key) => context.watch<AppState>().t(key);
 
+  int get _totalDays {
+    final mk = int.tryParse(makkahDaysCtrl.text.trim()) ?? 0;
+    final md = destMode == 'makkah_madinah' && !_madinahVisit
+        ? (int.tryParse(madinahDaysCtrl.text.trim()) ?? 0)
+        : 0;
+    return (mk + md) < 1 ? 1 : mk + md;
+  }
+
   void _next() {
     if (step == 0) {
-      if (titleCtrl.text.trim().isEmpty || cityId == null || durationCtrl.text.trim().isEmpty) {
+      if (titleCtrl.text.trim().isEmpty || cityId == null || makkahDaysCtrl.text.trim().isEmpty) {
         setState(() => error = t('err_trip_basic_required'));
         return;
       }
@@ -461,7 +469,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       'status': status,
       'schedule_type': scheduleType,
       'price': double.tryParse(priceCtrl.text.trim()) ?? 0,
-      'duration_days': int.tryParse(durationCtrl.text.trim()) ?? 1,
+      // Duration = Makkah days + Madinah nights (none for a Madinah day visit).
+      'duration_days': _totalDays,
       'dest_mode': destMode,
       'dest_order': destMode == 'makkah_madinah' ? destOrder : null,
       'makkah_days': int.tryParse(makkahDaysCtrl.text.trim()),
@@ -708,17 +717,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        DropdownButtonFormField<String>(
-          value: status,
-          decoration: InputDecoration(labelText: t('field_status')),
-          items: [
-            DropdownMenuItem(value: 'active', child: Text(t('status_active'))),
-            DropdownMenuItem(value: 'draft', child: Text(t('status_draft'))),
-            DropdownMenuItem(value: 'inactive', child: Text(t('status_stopped'))),
-          ],
-          onChanged: (v) => setState(() => status = v ?? status),
-        ),
+        // No status field: new trips are active, an edit keeps the trip's
+        // current status (pause/resume stays on the trips list).
         const SizedBox(height: 18),
         Text(t('schedule_system_label'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
@@ -773,18 +773,6 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
             ],
             onChanged: (v) => setState(() => busType = v),
           ),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: durationCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: t('fact_duration')),
-              ),
-            ),
-          ],
         ),
         const SizedBox(height: 14),
         Row(
