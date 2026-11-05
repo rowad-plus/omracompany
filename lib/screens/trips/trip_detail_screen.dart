@@ -220,7 +220,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
               children: [
                 _fact(t('fact_duration'), '${trip.durationDays} ${t('unit_days')}'),
                 _fact(t('fact_price_per_person'), '${trip.price.toStringAsFixed(0)} ${trip.currency}'),
-                _fact(t('fact_seats'), '${trip.bookingsCount} / ${trip.totalSeats}'),
+                _fact(t('field_bus_type'), trip.busType == null ? '—' : t('bus_type_${trip.busType}')),
                 _fact(t('fact_hotel_mecca'), trip.hotelName ?? '—'),
                 _fact(t('fact_hotel_medina'), trip.hotelNameMadinah ?? '—'),
                 _fact(t('fact_trip_date'), trip.nextDate?.split('T').first ?? '—'),

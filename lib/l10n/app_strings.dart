@@ -1344,6 +1344,21 @@ class AppStrings {
       AppLanguage.tr: 'Tarih ekle', AppLanguage.ur: 'تاریخ شامل کریں',
       AppLanguage.id: 'Tambah tanggal', AppLanguage.ms: 'Tambah tarikh',
     },
+    'field_bus_type': {
+      AppLanguage.ar: 'نوع الباص', AppLanguage.en: 'Bus type', AppLanguage.fr: 'Type de bus',
+      AppLanguage.tr: 'Otobüs tipi', AppLanguage.ur: 'بس کی قسم',
+      AppLanguage.id: 'Jenis bus', AppLanguage.ms: 'Jenis bas',
+    },
+    'bus_type_32': {
+      AppLanguage.ar: 'باص 32 راكب', AppLanguage.en: '32-passenger bus', AppLanguage.fr: 'Bus de 32 places',
+      AppLanguage.tr: '32 kişilik otobüs', AppLanguage.ur: '32 مسافروں والی بس',
+      AppLanguage.id: 'Bus 32 penumpang', AppLanguage.ms: 'Bas 32 penumpang',
+    },
+    'bus_type_49': {
+      AppLanguage.ar: 'باص 49 راكب', AppLanguage.en: '49-passenger bus', AppLanguage.fr: 'Bus de 49 places',
+      AppLanguage.tr: '49 kişilik otobüs', AppLanguage.ur: '49 مسافروں والی بس',
+      AppLanguage.id: 'Bus 49 penumpang', AppLanguage.ms: 'Bas 49 penumpang',
+    },
     'dest_sa_makkah_only': {
       AppLanguage.ar: 'مكة فقط', AppLanguage.en: 'Makkah only', AppLanguage.fr: 'La Mecque uniquement',
       AppLanguage.tr: 'Sadece Mekke', AppLanguage.ur: 'صرف مکہ',

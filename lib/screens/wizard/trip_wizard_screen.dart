@@ -76,6 +76,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   String destMode = 'makkah_madinah';
   /// Saudi companies only: 'visit' (Madinah day trip, no nights) or 'overnight'.
   String madinahStay = 'overnight';
+  /// '32' | '49' passengers, or null (not chosen).
+  String? busType;
   bool get _madinahVisit => destMode == 'makkah_madinah' && madinahStay == 'visit';
   String destOrder = 'makkah_first';
   final durationCtrl = TextEditingController();
@@ -163,6 +165,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         'dest_mode': destMode,
         'dest_order': destOrder,
         'madinah_stay': madinahStay,
+        'bus_type': busType,
         'duration': durationCtrl.text,
         'makkah_days': makkahDaysCtrl.text,
         'madinah_days': madinahDaysCtrl.text,
@@ -238,6 +241,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       destMode = d['dest_mode'] as String? ?? destMode;
       destOrder = d['dest_order'] as String? ?? destOrder;
       madinahStay = d['madinah_stay'] as String? ?? madinahStay;
+      busType = d['bus_type'] as String?;
       durationCtrl.text = s('duration');
       makkahDaysCtrl.text = s('makkah_days');
       madinahDaysCtrl.text = s('madinah_days');
@@ -318,6 +322,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       destMode = data['dest_mode'] as String? ?? 'makkah_madinah';
       destOrder = data['dest_order'] as String? ?? 'makkah_first';
       madinahStay = data['madinah_stay'] as String? ?? 'overnight';
+      final bt = data['bus_type']?.toString();
+      busType = (bt == '32' || bt == '49') ? bt : null;
       durationCtrl.text = '${data['duration_days'] ?? ''}';
       makkahDaysCtrl.text = '${data['makkah_days'] ?? ''}';
       madinahDaysCtrl.text = '${data['madinah_days'] ?? ''}';
@@ -462,6 +468,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       'madinah_days': _madinahVisit ? 0 : (destMode == 'makkah_madinah' ? int.tryParse(madinahDaysCtrl.text.trim()) : null),
       if (context.read<AppState>().companyIsSaudi && destMode == 'makkah_madinah') 'madinah_stay': madinahStay,
       'total_seats': int.tryParse(seatsCtrl.text.trim()),
+      'bus_type': busType,
       if (scheduleType == 'recurring') 'recurrence_frequency': recurrenceFrequency,
       if (scheduleType == 'recurring' && recurrenceFrequency == 'weekly') 'recurrence_day_of_week': recurrenceDayOfWeek,
       if (scheduleType == 'recurring' && recurrenceFrequency == 'monthly') 'recurrence_day_of_month': recurrenceDayOfMonth,
@@ -751,6 +758,23 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
           ),
         ],
         const SizedBox(height: 14),
+        // Bus type (all countries): 32 or 49 passengers.
+        SizedBox(
+          height: 50,
+          child: DropdownButtonFormField<String>(
+            value: busType,
+            isExpanded: true,
+            decoration: InputDecoration(
+                labelText: t('field_bus_type'),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12)),
+            items: [
+              DropdownMenuItem(value: '32', child: Text(t('bus_type_32'))),
+              DropdownMenuItem(value: '49', child: Text(t('bus_type_49'))),
+            ],
+            onChanged: (v) => setState(() => busType = v),
+          ),
+        ),
+        const SizedBox(height: 14),
         Row(
           children: [
             Expanded(
@@ -758,14 +782,6 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
                 controller: durationCtrl,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: t('fact_duration')),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: seatsCtrl,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: t('fact_seats')),
               ),
             ),
           ],

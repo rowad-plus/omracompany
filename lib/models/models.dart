@@ -392,6 +392,8 @@ class ApiTrip {
   final double price;
   final String currency;
   final int totalSeats;
+  /// '32' | '49' passengers, or null.
+  final String? busType;
   final int bookingsCount;
   final String? hotelName;
   final int hotelStars;
@@ -425,6 +427,7 @@ class ApiTrip {
     required this.price,
     required this.currency,
     required this.totalSeats,
+    this.busType,
     required this.bookingsCount,
     this.hotelName,
     this.hotelStars = 0,
@@ -460,6 +463,7 @@ class ApiTrip {
         price: _toDouble(j['price']),
         currency: j['currency'] as String? ?? '',
         totalSeats: j['total_seats'] as int? ?? 0,
+        busType: const ['32', '49'].contains(j['bus_type']?.toString()) ? j['bus_type'].toString() : null,
         bookingsCount: j['bookings_count'] as int? ?? 0,
         hotelName: j['hotel_name'] as String?,
         hotelStars: j['hotel_stars'] as int? ?? 0,
