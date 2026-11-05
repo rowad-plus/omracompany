@@ -86,6 +86,8 @@ class AppState extends ChangeNotifier {
   String? companyName;
   String? companyLogo;
   String? companyStatus;
+  String? companyCountryCode;
+  bool get companyIsSaudi => companyCountryCode == 'SA';
   Set<String> permissions = {};
 
   /// Signed up but the company details (step 2) aren't in yet — the app
@@ -124,6 +126,7 @@ class AppState extends ChangeNotifier {
     companyName = company?['name'] as String?;
     companyLogo = company?['logo'] as String?;
     companyStatus = company?['status'] as String?;
+    companyCountryCode = company?['country_code'] as String?;
     permissions = (account['permissions'] as List<dynamic>? ?? []).cast<String>().toSet();
     currentRoles = _rolesFromPermissions(account['role'] as String? ?? '', permissions);
     companies = (account['companies'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();

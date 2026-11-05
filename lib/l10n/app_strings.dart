@@ -1344,6 +1344,23 @@ class AppStrings {
       AppLanguage.tr: 'Tarih ekle', AppLanguage.ur: 'تاریخ شامل کریں',
       AppLanguage.id: 'Tambah tanggal', AppLanguage.ms: 'Tambah tarikh',
     },
+    'dest_sa_makkah_only': {
+      AppLanguage.ar: 'مكة فقط', AppLanguage.en: 'Makkah only', AppLanguage.fr: 'La Mecque uniquement',
+      AppLanguage.tr: 'Sadece Mekke', AppLanguage.ur: 'صرف مکہ',
+      AppLanguage.id: 'Hanya Mekkah', AppLanguage.ms: 'Mekah sahaja',
+    },
+    'dest_sa_madinah_visit': {
+      AppLanguage.ar: 'مكة – المدينة زيارة (بدون مبيت)', AppLanguage.en: 'Makkah – Madinah day visit (no overnight)',
+      AppLanguage.fr: 'La Mecque – visite de Médine (sans nuitée)', AppLanguage.tr: 'Mekke – Medine günübirlik ziyaret',
+      AppLanguage.ur: 'مکہ – مدینہ زیارت (بغیر قیام)', AppLanguage.id: 'Mekkah – kunjungan Madinah (tanpa menginap)',
+      AppLanguage.ms: 'Mekah – lawatan Madinah (tanpa bermalam)',
+    },
+    'dest_sa_madinah_overnight': {
+      AppLanguage.ar: 'مكة – المدينة مبيت', AppLanguage.en: 'Makkah – Madinah overnight stay',
+      AppLanguage.fr: 'La Mecque – séjour à Médine', AppLanguage.tr: 'Mekke – Medine konaklamalı',
+      AppLanguage.ur: 'مکہ – مدینہ قیام', AppLanguage.id: 'Mekkah – menginap di Madinah',
+      AppLanguage.ms: 'Mekah – bermalam di Madinah',
+    },
     'destination_label': {
       AppLanguage.ar: 'الوجهة المقصودة', AppLanguage.en: 'Intended destination', AppLanguage.fr: 'Destination prévue',
       AppLanguage.tr: 'Hedef varış yeri', AppLanguage.ur: 'مطلوبہ منزل',
