@@ -1604,6 +1604,17 @@ class AppStrings {
       AppLanguage.tr: 'Ayrıntılı açıklama', AppLanguage.ur: 'تفصیلی تفصیل',
       AppLanguage.id: 'Deskripsi lengkap', AppLanguage.ms: 'Penerangan terperinci',
     },
+    'upload_video': {
+      AppLanguage.ar: 'رفع فيديو للرحلة', AppLanguage.en: 'Upload a trip video', AppLanguage.fr: 'Ajouter une vidéo du voyage',
+      AppLanguage.tr: 'Gezi videosu yükle', AppLanguage.ur: 'سفر کی ویڈیو اپ لوڈ کریں',
+      AppLanguage.id: 'Unggah video perjalanan', AppLanguage.ms: 'Muat naik video perjalanan',
+    },
+    'err_video_too_big': {
+      AppLanguage.ar: 'حجم الفيديو أكبر من 50 ميجا', AppLanguage.en: 'The video is larger than 50 MB',
+      AppLanguage.fr: 'La vidéo dépasse 50 Mo', AppLanguage.tr: 'Video 50 MB üzerinde',
+      AppLanguage.ur: 'ویڈیو 50 MB سے بڑی ہے', AppLanguage.id: 'Video lebih dari 50 MB',
+      AppLanguage.ms: 'Video melebihi 50 MB',
+    },
     'upload_photos_hint': {
       AppLanguage.ar: 'اضغط لإضافة صور البرنامج', AppLanguage.en: 'Tap to add program photos',
       AppLanguage.fr: 'Appuyez pour ajouter des photos du programme', AppLanguage.tr: 'Program fotoğrafları eklemek için dokunun',

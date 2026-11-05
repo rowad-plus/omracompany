@@ -1537,12 +1537,13 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<String?> createTrip(Map<String, dynamic> data, {List<List<int>> images = const []}) async {
+  /// [media]: file name -> bytes, photos and videos alike.
+  Future<String?> createTrip(Map<String, dynamic> data, {List<MapEntry<String, List<int>>> media = const []}) async {
     try {
       await _api.postMultipart(
         '/umrah-trips',
         data,
-        files: [for (final bytes in images) MapEntry('images[]', bytes)],
+        files: [for (final m in media) MapEntry('images[]::${m.key}', m.value)],
       );
       return null;
     } on ApiException catch (e) {
@@ -1610,12 +1611,12 @@ class AppState extends ChangeNotifier {
 
   /// تعديل برنامج موجود — لو [images] اتبعتت بتتضاف على الصور الموجودة
   /// (الباك إند بيحافظ عليها لو keep_images=true).
-  Future<String?> updateTrip(int tripId, Map<String, dynamic> data, {List<List<int>> images = const []}) async {
+  Future<String?> updateTrip(int tripId, Map<String, dynamic> data, {List<MapEntry<String, List<int>>> media = const []}) async {
     try {
       await _api.postMultipart(
         '/umrah-trips/$tripId',
         {...data, 'keep_images': true},
-        files: [for (final bytes in images) MapEntry('images[]', bytes)],
+        files: [for (final m in media) MapEntry('images[]::${m.key}', m.value)],
         method: 'PUT',
       );
       await fetchApiTrips();

@@ -454,6 +454,22 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
     if (picked.isNotEmpty) setState(() => images.addAll(picked));
   }
 
+  static final _videoExt = RegExp(r'\.(mp4|mov|m4v|webm|3gp)$', caseSensitive: false);
+  bool _isVideo(XFile f) =>
+      (f.mimeType ?? '').startsWith('video/') || _videoExt.hasMatch(f.name) || _videoExt.hasMatch(f.path);
+
+  /// Trip video (MP4 / MOV, up to 50 MB), shown in the trip's gallery.
+  Future<void> _pickVideo() async {
+    final v = await _picker.pickVideo(source: ImageSource.gallery);
+    if (v == null) return;
+    if (await v.length() > 50 * 1024 * 1024) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('err_video_too_big'))));
+      return;
+    }
+    setState(() => images.add(v));
+  }
+
   Future<void> _submit() async {
     setState(() {
       saving = true;
@@ -525,14 +541,18 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       ],
     };
 
-    final imageBytes = <List<int>>[];
-    for (final img in images) {
-      imageBytes.add(await img.readAsBytes());
+    final media = <MapEntry<String, List<int>>>[];
+    for (var i = 0; i < images.length; i++) {
+      final f = images[i];
+      final ext = _isVideo(f)
+          ? (RegExp(r'\.(\w+)$').firstMatch(f.name)?.group(1) ?? 'mp4')
+          : 'jpg';
+      media.add(MapEntry('media_$i.$ext', await f.readAsBytes()));
     }
 
     final result = isEdit
-        ? await context.read<AppState>().updateTrip(widget.editingTripId!, data, images: imageBytes)
-        : await context.read<AppState>().createTrip(data, images: imageBytes);
+        ? await context.read<AppState>().updateTrip(widget.editingTripId!, data, media: media)
+        : await context.read<AppState>().createTrip(data, media: media);
     if (!mounted) return;
     setState(() => saving = false);
 
@@ -1241,6 +1261,13 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _pickVideo,
+          icon: const Icon(Icons.videocam_outlined),
+          label: Text(t('upload_video')),
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        ),
         if (existingImages.isNotEmpty) ...[
           const SizedBox(height: 14),
           Wrap(
@@ -1256,8 +1283,14 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: AppColors.border),
-                        image: DecorationImage(image: NetworkImage(existingImages[i]['url'] as String), fit: BoxFit.cover),
+                        color: existingImages[i]['media_type'] == 'video' ? Colors.black : null,
+                        image: existingImages[i]['media_type'] == 'video'
+                            ? null
+                            : DecorationImage(image: NetworkImage(existingImages[i]['url'] as String), fit: BoxFit.cover),
                       ),
+                      child: existingImages[i]['media_type'] == 'video'
+                          ? const Icon(Icons.play_circle_fill, color: Colors.white, size: 32)
+                          : null,
                     ),
                     Positioned(
                       top: -6,
@@ -1282,6 +1315,17 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
               for (var i = 0; i < images.length; i++)
                 Stack(
                   children: [
+                    if (_isVideo(images[i]))
+                      Container(
+                        width: 84,
+                        height: 84,
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.play_circle_fill, color: Colors.white, size: 32),
+                      )
+                    else
                     FutureBuilder<Uint8List>(
                       future: images[i].readAsBytes(),
                       builder: (ctx, snap) => Container(

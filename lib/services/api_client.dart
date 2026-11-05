@@ -149,11 +149,17 @@ class ApiClient {
     fields.forEach((k, v) => _flatten(k, v, flat));
     request.fields.addAll(flat);
 
+    // A key may carry its file name after '::' (e.g. 'images[]::clip.mp4').
     for (var i = 0; i < files.length; i++) {
-      request.files.add(http.MultipartFile.fromBytes(files[i].key, files[i].value, filename: 'image_$i.jpg'));
+      final parts = files[i].key.split('::');
+      final name = parts.length > 1 ? parts[1] : 'image_$i.jpg';
+      request.files.add(http.MultipartFile.fromBytes(parts[0], files[i].value, filename: name));
     }
 
-    final streamed = await _http.send(request).timeout(const Duration(seconds: 60), onTimeout: _throwTimeout);
+    // Videos (up to 50 MB) need longer than a plain form post.
+    final streamed = await _http
+        .send(request)
+        .timeout(Duration(seconds: files.isEmpty ? 60 : 300), onTimeout: _throwTimeout);
     final res = await http.Response.fromStream(streamed);
     return _decode(res);
   }
