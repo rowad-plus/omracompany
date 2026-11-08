@@ -678,6 +678,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// Adds extra room(s) to an existing booking (total + remaining go up).
+  Future<String?> addBookingExtraRooms(int id, {required int rooms, required double price}) async {
+    try {
+      await _api.post('/bookings/$id/extra-rooms', {'rooms': rooms, 'price': price});
+      await fetchBookings();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر إضافة الغرفة';
+    }
+  }
+
   Future<String?> cancelBooking(int id) async {
     try {
       await _api.patch('/bookings/$id/cancel');

@@ -1,7 +1,7 @@
 name: rowadplus
 description: تطبيق رواد بلس لإدارة برامج العمرة والحج
 publish_to: 'none'
-version: 1.0.15+16
+version: 1.0.16+17
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

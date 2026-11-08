@@ -279,6 +279,8 @@ class _BookingRow extends StatelessWidget {
         title: name,
         subtitle: [
           '${booking['persons_count']} ${t('unit_seat')}',
+          if (((booking['extra_rooms'] as num?)?.toInt() ?? 0) > 0) '+${booking['extra_rooms']} ${t('unit_extra_room')}',
+          if (booking['source'] == 'whatsapp') t('whatsapp_booking'),
           if (booking['total_price'] != null) '${booking['total_price']} ${booking['tripCurrency'] ?? ''}',
           if (booking['departure_date'] != null) booking['departure_date'],
           if (booking['ref'] != null) booking['ref'],
@@ -808,6 +810,52 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
     }
   }
 
+  /// Company adds extra room(s) to this booking: rooms + price per room
+  /// (pre-filled from the trip's extra room price). The total goes up and the
+  /// difference is collected by the company directly.
+  Future<void> _showAddRoomDialog(BuildContext context, Map<String, dynamic> b) async {
+    final state = context.read<AppState>();
+    final t = state.t;
+    final roomsCtrl = TextEditingController(text: '1');
+    final def = b['trip_extra_room_price'];
+    final priceCtrl = TextEditingController(
+        text: def == null ? '' : '$def'.replaceAll(RegExp(r'\.0+$'), ''));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t('action_add_room')),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: roomsCtrl,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: t('field_rooms_count')),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: priceCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+                labelText: t('field_extra_room_price'), suffixText: '${b['tripCurrency'] ?? ''}'),
+          ),
+          const SizedBox(height: 8),
+          Text(t('add_room_note'), style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t('action_cancel'))),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t('action_confirm'))),
+        ],
+      ),
+    );
+    final rooms = int.tryParse(roomsCtrl.text.trim()) ?? 0;
+    final price = double.tryParse(priceCtrl.text.trim());
+    if (ok != true || !mounted) return;
+    if (rooms < 1 || price == null || price <= 0) {
+      ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(t('add_room_invalid'))));
+      return;
+    }
+    _run(() => state.addBookingExtraRooms(b['id'] as int, rooms: rooms, price: price));
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
@@ -831,7 +879,11 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
     // RLM around each part keeps the Arabic/Latin pieces in reading order.
     final meta = [
       '${b['persons_count'] ?? 1} ${t('unit_person')}',
+      if (((b['extra_rooms'] as num?)?.toInt() ?? 0) > 0) '+${b['extra_rooms']} ${t('unit_extra_room')}',
+      if (b['source'] == 'whatsapp') t('whatsapp_booking'),
       if (b['total_price'] != null) '${b['total_price']} ${b['tripCurrency'] ?? ''}',
+      if (b['payment_status'] == 'partially_paid' && b['amount_remaining'] != null)
+        '${t('remaining_word')} ${b['amount_remaining']}',
       if (b['departure_date'] != null) b['departure_date'],
       if (b['ref'] != null) b['ref'],
     ].map((p) => '‏$p‏').join(' · ');
@@ -1000,6 +1052,38 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
                   ],
                 ),
               ),
+
+              // ── Extra room(s) for this booking (2026-11-08) ──
+              // Only for staff who see money (owner / bookings.manage).
+              if (!busy && b.containsKey('total_amount') && status != 'cancelled' && status != 'rejected') ...[
+                const SizedBox(height: 14),
+                OutlinedButton.icon(
+                  onPressed: () => _showAddRoomDialog(context, b),
+                  icon: const Icon(Icons.bed_outlined, size: 18),
+                  label: Text(t('action_add_room')),
+                ),
+                if (status == 'confirmed' && b['payment_status'] == 'partially_paid') ...[
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                    onPressed: () async {
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          content: Text(t('mark_remaining_paid_question')),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t('action_cancel'))),
+                            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t('action_confirm'))),
+                          ],
+                        ),
+                      );
+                      if (ok == true) _run(() => state.markBookingPaid(b['id'] as int));
+                    },
+                    icon: const Icon(Icons.payments_outlined, size: 18),
+                    label: Text(t('action_mark_remaining_paid')),
+                  ),
+                ],
+              ],
 
               // ── Booking decisions (pending only) ──
               if (busy)
