@@ -79,7 +79,10 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   String madinahStay = 'overnight';
   /// '32' | '49' passengers, or null (not chosen).
   String? busType = '49'; // new trips start economy -> 49 seats
-  bool get _madinahVisit => destMode == 'makkah_madinah' && madinahStay == 'visit';
+  bool get _madinahVisit => _hasMadinah && madinahStay == 'visit';
+  /// Saudi «المدينة زيارة» / «المدينة مبيت»: no Makkah days or Makkah hotel.
+  bool get _madinahOnly => destMode == 'madinah_only';
+  bool get _hasMadinah => destMode == 'makkah_madinah' || destMode == 'madinah_only';
   String destOrder = 'makkah_first';
   final durationCtrl = TextEditingController();
   final makkahDaysCtrl = TextEditingController();
@@ -479,8 +482,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   String t(String key) => context.watch<AppState>().t(key);
 
   int get _totalDays {
-    final mk = int.tryParse(makkahDaysCtrl.text.trim()) ?? 0;
-    final md = destMode == 'makkah_madinah' && !_madinahVisit
+    final mk = _madinahOnly ? 0 : (int.tryParse(makkahDaysCtrl.text.trim()) ?? 0);
+    final md = _hasMadinah && !_madinahVisit
         ? (int.tryParse(madinahDaysCtrl.text.trim()) ?? 0)
         : 0;
     return (mk + md) < 1 ? 1 : mk + md;
@@ -488,7 +491,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
 
   void _next() {
     if (step == 0) {
-      if (titleCtrl.text.trim().isEmpty || cityId == null || makkahDaysCtrl.text.trim().isEmpty) {
+      if (titleCtrl.text.trim().isEmpty || cityId == null || (!_madinahOnly && makkahDaysCtrl.text.trim().isEmpty)) {
         setState(() => error = t('err_trip_basic_required'));
         return;
       }
@@ -557,9 +560,9 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       'duration_days': _totalDays,
       'dest_mode': destMode,
       'dest_order': destMode == 'makkah_madinah' ? destOrder : null,
-      'makkah_days': int.tryParse(makkahDaysCtrl.text.trim()),
-      'madinah_days': _madinahVisit ? 0 : (destMode == 'makkah_madinah' ? int.tryParse(madinahDaysCtrl.text.trim()) : null),
-      if (context.read<AppState>().companyIsSaudi && destMode == 'makkah_madinah') 'madinah_stay': madinahStay,
+      'makkah_days': _madinahOnly ? 0 : int.tryParse(makkahDaysCtrl.text.trim()),
+      'madinah_days': _madinahVisit ? 0 : (_hasMadinah ? int.tryParse(madinahDaysCtrl.text.trim()) : null),
+      if (context.read<AppState>().companyIsSaudi && _hasMadinah) 'madinah_stay': madinahStay,
       'total_seats': int.tryParse(seatsCtrl.text.trim()),
       'bus_type': busType,
       if (scheduleType == 'recurring') 'recurrence_frequency': recurrenceFrequency,
@@ -570,13 +573,13 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
             .where((d) => d != null)
             .map((d) => {'departure_date': d!.toIso8601String().split('T').first})
             .toList(),
-      if (hotelNameCtrl.text.trim().isNotEmpty) ...{
+      if (!_madinahOnly && hotelNameCtrl.text.trim().isNotEmpty) ...{
         'hotel_name': hotelNameCtrl.text.trim(),
         'hotel_stars': hotelStars,
         'hotel_location': hotelLocationCtrl.text.trim(),
         'distance_from_haram': int.tryParse(distanceCtrl.text.trim()),
       },
-      if (destMode == 'makkah_madinah' && !_madinahVisit && hotelNameMadinahCtrl.text.trim().isNotEmpty) ...{
+      if (_hasMadinah && !_madinahVisit && hotelNameMadinahCtrl.text.trim().isNotEmpty) ...{
         'hotel_name_madinah': hotelNameMadinahCtrl.text.trim(),
         'hotel_stars_madinah': hotelStarsMadinah,
         'hotel_location_madinah': hotelLocationMadinahCtrl.text.trim(),
@@ -872,6 +875,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         const SizedBox(height: 14),
         Row(
           children: [
+            if (!_madinahOnly)
             Expanded(
               child: TextField(
                 controller: makkahDaysCtrl,
@@ -879,8 +883,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
                 decoration: InputDecoration(labelText: t('field_days_in_mecca')),
               ),
             ),
-            if (destMode == 'makkah_madinah' && !_madinahVisit) ...[
-              const SizedBox(width: 10),
+            if (_hasMadinah && !_madinahVisit) ...[
+              if (!_madinahOnly) const SizedBox(width: 10),
               Expanded(
                 child: TextField(
                   controller: madinahDaysCtrl,
@@ -1131,7 +1135,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         ),
         const SizedBox(height: 8),
         TextField(controller: hotelLocationCtrl, decoration: InputDecoration(labelText: t('field_city'))),
-        if (destMode == 'makkah_madinah' && !_madinahVisit) ...[
+        if (_hasMadinah && !_madinahVisit) ...[
           const SizedBox(height: 20),
           Text(t('fact_hotel_medina'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
@@ -1605,7 +1609,9 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   /// Saudi companies: one 50px select — Makkah only / Madinah day visit /
   /// Madinah overnight (the overnight choice shows the Madinah days field).
   Widget _saudiDestinationSelect() {
-    final value = destMode == 'makkah_only' ? 'makkah_only' : madinahStay;
+    final value = destMode == 'makkah_only'
+        ? 'makkah_only'
+        : (_madinahOnly ? 'madinah_$madinahStay' : madinahStay);
     return SizedBox(
       height: 50,
       child: DropdownButtonFormField<String>(
@@ -1616,10 +1622,16 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
           DropdownMenuItem(value: 'makkah_only', child: Text(t('dest_sa_makkah_only'))),
           DropdownMenuItem(value: 'visit', child: Text(t('dest_sa_madinah_visit'))),
           DropdownMenuItem(value: 'overnight', child: Text(t('dest_sa_madinah_overnight'))),
+          DropdownMenuItem(value: 'madinah_visit', child: Text(t('dest_sa_madinah_only_visit'))),
+          DropdownMenuItem(value: 'madinah_overnight', child: Text(t('dest_sa_madinah_only_overnight'))),
         ],
         onChanged: (v) => setState(() {
           if (v == 'makkah_only') {
             destMode = 'makkah_only';
+          } else if (v == 'madinah_visit' || v == 'madinah_overnight') {
+            destMode = 'madinah_only';
+            madinahStay = v == 'madinah_visit' ? 'visit' : 'overnight';
+            destOrder = 'makkah_first';
           } else {
             destMode = 'makkah_madinah';
             madinahStay = v == 'visit' ? 'visit' : 'overnight';

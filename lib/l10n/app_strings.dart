@@ -1428,6 +1428,18 @@ class AppStrings {
       AppLanguage.ur: 'مکہ – مدینہ قیام', AppLanguage.id: 'Mekkah – menginap di Madinah',
       AppLanguage.ms: 'Mekah – bermalam di Madinah',
     },
+    'dest_sa_madinah_only_visit': {
+      AppLanguage.ar: 'المدينة زيارة (بدون مبيت)', AppLanguage.en: 'Madinah day visit (no overnight)',
+      AppLanguage.fr: 'Visite de Médine (sans nuitée)', AppLanguage.tr: 'Medine günübirlik ziyaret',
+      AppLanguage.ur: 'مدینہ زیارت (بغیر قیام)', AppLanguage.id: 'Kunjungan Madinah (tanpa menginap)',
+      AppLanguage.ms: 'Lawatan Madinah (tanpa bermalam)',
+    },
+    'dest_sa_madinah_only_overnight': {
+      AppLanguage.ar: 'المدينة مبيت', AppLanguage.en: 'Madinah overnight stay',
+      AppLanguage.fr: 'Séjour à Médine', AppLanguage.tr: 'Medine konaklamalı',
+      AppLanguage.ur: 'مدینہ قیام', AppLanguage.id: 'Menginap di Madinah',
+      AppLanguage.ms: 'Bermalam di Madinah',
+    },
     'destination_label': {
       AppLanguage.ar: 'الوجهة المقصودة', AppLanguage.en: 'Intended destination', AppLanguage.fr: 'Destination prévue',
       AppLanguage.tr: 'Hedef varış yeri', AppLanguage.ur: 'مطلوبہ منزل',
