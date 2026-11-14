@@ -13,6 +13,7 @@ import 'screens/root_shell.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/wallet/tickets_screen.dart';
 import 'screens/wallet/wallet_screen.dart';
+import 'services/force_update.dart';
 import 'services/live_updates.dart';
 import 'services/push_service.dart';
 
@@ -56,7 +57,14 @@ class RowadPlusApp extends StatelessWidget {
             ],
             builder: (context, child) => Directionality(
               textDirection: lang.isRtl ? TextDirection.rtl : TextDirection.ltr,
-              child: safeAppFrame(child!),
+              child: ForceUpdateGate(
+                appKey: 'business',
+                defaultStoreUrls: const {
+                  'android': 'https://play.google.com/store/apps/details?id=omraway.office',
+                  'ios': 'https://apps.apple.com/app/id6822433163',
+                },
+                child: safeAppFrame(child!),
+              ),
             ),
             home: const AuthGate(),
           );

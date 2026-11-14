@@ -1361,6 +1361,46 @@ class AppStrings {
       AppLanguage.tr: 'Otobüs tipi', AppLanguage.ur: 'بس کی قسم',
       AppLanguage.id: 'Jenis bus', AppLanguage.ms: 'Jenis bas',
     },
+    'bus_type_6': {
+      AppLanguage.ar: 'باص 6 ركاب', AppLanguage.en: '6-passenger bus', AppLanguage.fr: 'Bus de 6 places',
+      AppLanguage.tr: '6 kişilik otobüs', AppLanguage.ur: '6 مسافروں والی بس',
+      AppLanguage.id: 'Bus 6 penumpang', AppLanguage.ms: 'Bas 6 penumpang',
+    },
+    'bus_type_8': {
+      AppLanguage.ar: 'باص 8 ركاب', AppLanguage.en: '8-passenger bus', AppLanguage.fr: 'Bus de 8 places',
+      AppLanguage.tr: '8 kişilik otobüs', AppLanguage.ur: '8 مسافروں والی بس',
+      AppLanguage.id: 'Bus 8 penumpang', AppLanguage.ms: 'Bas 8 penumpang',
+    },
+    'bus_type_10': {
+      AppLanguage.ar: 'باص 10 ركاب', AppLanguage.en: '10-passenger bus', AppLanguage.fr: 'Bus de 10 places',
+      AppLanguage.tr: '10 kişilik otobüs', AppLanguage.ur: '10 مسافروں والی بس',
+      AppLanguage.id: 'Bus 10 penumpang', AppLanguage.ms: 'Bas 10 penumpang',
+    },
+    'bus_type_14': {
+      AppLanguage.ar: 'باص 14 راكب', AppLanguage.en: '14-passenger bus', AppLanguage.fr: 'Bus de 14 places',
+      AppLanguage.tr: '14 kişilik otobüs', AppLanguage.ur: '14 مسافروں والی بس',
+      AppLanguage.id: 'Bus 14 penumpang', AppLanguage.ms: 'Bas 14 penumpang',
+    },
+    'single_room_price_label': {
+      AppLanguage.ar: 'سعر الغرفة الخاصة لشخص واحد — اختياري', AppLanguage.en: 'Private room for one person — optional',
+      AppLanguage.fr: 'Chambre privée pour une personne — facultatif', AppLanguage.tr: 'Tek kişilik özel oda — isteğe bağlı',
+      AppLanguage.ur: 'ایک شخص کے لیے نجی کمرہ — اختیاری', AppLanguage.id: 'Kamar pribadi untuk satu orang — opsional',
+      AppLanguage.ms: 'Bilik persendirian untuk seorang — pilihan',
+    },
+    'single_room_price_hint': {
+      AppLanguage.ar: 'لو الشخص اختار عند الحجز "غرفة خاصة" له وحده يدفع هذا السعر بدل سعر الفرد. اتركه فارغاً لإخفاء الخيار.',
+      AppLanguage.en: 'If one person picks "private room" when booking, they pay this instead of the per-person price. Leave empty to hide.',
+      AppLanguage.fr: 'Si une personne choisit « chambre privée », elle paie ce prix. Laisser vide pour masquer.',
+      AppLanguage.tr: 'Tek kişi rezervasyonda "özel oda" seçerse bu fiyatı öder. Gizlemek için boş bırakın.',
+      AppLanguage.ur: 'اگر ایک شخص بکنگ میں "نجی کمرہ" چنے تو یہ قیمت ادا کرے گا۔ چھپانے کے لیے خالی چھوڑیں۔',
+      AppLanguage.id: 'Jika satu orang memilih "kamar pribadi", ia membayar harga ini. Kosongkan untuk menyembunyikan.',
+      AppLanguage.ms: 'Jika seorang memilih "bilik persendirian", dia membayar harga ini. Biarkan kosong untuk sembunyi.',
+    },
+    'field_single_room_price': {
+      AppLanguage.ar: 'سعر الغرفة الخاصة (شخص واحد)', AppLanguage.en: 'Private room price (1 person)', AppLanguage.fr: 'Prix chambre privée (1 personne)',
+      AppLanguage.tr: 'Özel oda fiyatı (1 kişi)', AppLanguage.ur: 'نجی کمرے کی قیمت (1 شخص)',
+      AppLanguage.id: 'Harga kamar pribadi (1 orang)', AppLanguage.ms: 'Harga bilik persendirian (1 orang)',
+    },
     'bus_type_32': {
       AppLanguage.ar: 'باص 32 راكب', AppLanguage.en: '32-passenger bus', AppLanguage.fr: 'Bus de 32 places',
       AppLanguage.tr: '32 kişilik otobüs', AppLanguage.ur: '32 مسافروں والی بس',
@@ -1441,7 +1481,7 @@ class AppStrings {
       AppLanguage.id: 'Harga per orang *', AppLanguage.ms: 'Harga seorang *',
     },
     'family_pricing_label': {
-      AppLanguage.ar: 'سعر الغرفة الخاصة (عائلي) — اختياري', AppLanguage.en: 'Private room price (family) — optional',
+      AppLanguage.ar: 'أسعار العوائل (غرفة خاصة للعائلة) — اختياري', AppLanguage.en: 'Family prices (private family room) — optional',
       AppLanguage.fr: 'Prix chambre privée (famille) — facultatif',
       AppLanguage.tr: 'Özel oda fiyatı (aile) — isteğe bağlı', AppLanguage.ur: 'نجی کمرے کی قیمت (خاندان) — اختیاری',
       AppLanguage.id: 'Harga kamar pribadi (keluarga) — opsional', AppLanguage.ms: 'Harga bilik persendirian (keluarga) — pilihan',

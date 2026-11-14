@@ -93,6 +93,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   final priceGoOnlyCtrl = TextEditingController();
   final priceReturnOnlyCtrl = TextEditingController();
   final extraRoomPriceCtrl = TextEditingController();
+  // One person alone in a private room (optional).
+  final singleRoomPriceCtrl = TextEditingController();
 
   // ----- الخطوة 3: الفندق والغرف -----
   final hotelNameCtrl = TextEditingController();
@@ -218,6 +220,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         'price_go_only': priceGoOnlyCtrl.text,
         'price_return_only': priceReturnOnlyCtrl.text,
         'extra_room_price': extraRoomPriceCtrl.text,
+        'private_room_price': singleRoomPriceCtrl.text,
         'family_prices': [for (final f in familyPrices) {'persons': f.personsCtrl.text, 'price': f.priceCtrl.text}],
         'hotel_name': hotelNameCtrl.text,
         'hotel_stars': hotelStars,
@@ -297,6 +300,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       priceGoOnlyCtrl.text = s('price_go_only');
       priceReturnOnlyCtrl.text = s('price_return_only');
       extraRoomPriceCtrl.text = s('extra_room_price');
+      singleRoomPriceCtrl.text = s('private_room_price');
       for (final f in (d['family_prices'] as List<dynamic>? ?? [])) {
         final row = _FamilyPriceRow();
         row.personsCtrl.text = f['persons'] as String? ?? '';
@@ -373,7 +377,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       destOrder = data['dest_order'] as String? ?? 'makkah_first';
       madinahStay = data['madinah_stay'] as String? ?? 'overnight';
       final bt = data['bus_type']?.toString();
-      busType = (bt == '32' || bt == '49') ? bt : null;
+      busType = const ['6', '8', '10', '14', '32', '49'].contains(bt) ? bt : null;
       durationCtrl.text = '${data['duration_days'] ?? ''}';
       makkahDaysCtrl.text = '${data['makkah_days'] ?? ''}';
       madinahDaysCtrl.text = '${data['madinah_days'] ?? ''}';
@@ -383,6 +387,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       priceGoOnlyCtrl.text = data['price_go_only'] == null ? '' : '${data['price_go_only']}'.replaceAll(RegExp(r'\.0+$'), '');
       priceReturnOnlyCtrl.text = data['price_return_only'] == null ? '' : '${data['price_return_only']}'.replaceAll(RegExp(r'\.0+$'), '');
       extraRoomPriceCtrl.text = data['extra_room_price'] == null ? '' : '${data['extra_room_price']}'.replaceAll(RegExp(r'\.0+$'), '');
+      singleRoomPriceCtrl.text = data['private_room_price'] == null ? '' : '${data['private_room_price']}'.replaceAll(RegExp(r'\.0+$'), '');
       final prices = (data['family_prices'] as List<dynamic>? ?? []);
       for (final p in prices) {
         final row = _FamilyPriceRow();
@@ -447,6 +452,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
     priceGoOnlyCtrl.dispose();
     priceReturnOnlyCtrl.dispose();
     extraRoomPriceCtrl.dispose();
+    singleRoomPriceCtrl.dispose();
     hotelNameCtrl.dispose();
     hotelLocationCtrl.dispose();
     distanceCtrl.dispose();
@@ -542,6 +548,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       'schedule_type': scheduleType,
       'price': double.tryParse(priceCtrl.text.trim()) ?? 0,
       'extra_room_price': double.tryParse(extraRoomPriceCtrl.text.trim()),
+      'private_room_price': double.tryParse(singleRoomPriceCtrl.text.trim()),
       if (context.read<AppState>().companyIsSaudi) ...{
         'price_go_only': double.tryParse(priceGoOnlyCtrl.text.trim()),
         'price_return_only': double.tryParse(priceReturnOnlyCtrl.text.trim()),
@@ -844,7 +851,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
           ),
         ],
         const SizedBox(height: 14),
-        // Bus type (all countries): 32 or 49 passengers.
+        // Bus type (all countries): 6 / 8 / 10 / 14 / 32 / 49 passengers.
         SizedBox(
           height: 50,
           child: DropdownButtonFormField<String>(
@@ -854,6 +861,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
                 labelText: t('field_bus_type'),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12)),
             items: [
+              for (final n in const ['6', '8', '10', '14'])
+                DropdownMenuItem(value: n, child: Text(t('bus_type_$n'))),
               DropdownMenuItem(value: '32', child: Text(t('bus_type_32'))),
               DropdownMenuItem(value: '49', child: Text(t('bus_type_49'))),
             ],
@@ -996,6 +1005,17 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
           keyboardType: TextInputType.number,
           decoration: InputDecoration(labelText: t('field_price_per_person')),
           onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 18),
+        Text(t('single_room_price_label'),
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
+        Text(t('single_room_price_hint'), style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+        const SizedBox(height: 10),
+        TextField(
+          controller: singleRoomPriceCtrl,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: t('field_single_room_price')),
         ),
         const SizedBox(height: 18),
         Text(t('family_pricing_label'),
