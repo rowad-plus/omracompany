@@ -1082,6 +1082,12 @@ class AppStrings {
       AppLanguage.en: 'Pick the departure city, and optionally add more detail like a meeting point or specific address',
     },
     'no_bookings_yet': {AppLanguage.ar: 'لا توجد حجوزات بعد', AppLanguage.en: 'No bookings yet'},
+    'section_new_bookings': {AppLanguage.ar: 'الحجوزات', AppLanguage.en: 'Bookings'},
+    'no_pending_bookings': {
+      AppLanguage.ar: 'لا توجد حجوزات جديدة بانتظار الرد',
+      AppLanguage.en: 'No new bookings waiting for a reply',
+    },
+    'more_pending_bookings': {AppLanguage.ar: 'و{n} حجوزات أخرى', AppLanguage.en: 'and {n} more'},
     'no_supervisors_yet': {AppLanguage.ar: 'لا يوجد موظفون متاحون بعد', AppLanguage.en: 'No employees available yet'},
     'owner_role_badge': {AppLanguage.ar: 'المالك', AppLanguage.en: 'Owner'},
     'password_optional_hint': {AppLanguage.ar: 'اتركه فارغًا لعدم التغيير', AppLanguage.en: 'Leave blank to keep unchanged'},

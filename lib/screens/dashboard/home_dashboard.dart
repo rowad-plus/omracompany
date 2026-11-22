@@ -21,6 +21,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
     super.initState();
     context.read<AppState>().fetchDashboard();
     context.read<AppState>().fetchApiTrips();
+    context.read<AppState>().fetchBookings();
+  }
+
+  Future<void> _refreshAll() async {
+    final s = context.read<AppState>();
+    await Future.wait([s.fetchDashboard(), s.fetchApiTrips(), s.fetchBookings()]);
   }
 
   Future<void> _openTrip(int? id) async {
@@ -91,11 +97,17 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final useDayRows = state.apiTrips.any((tr) => tr.daysKnown);
     final recentActivity = (data['recentActivity'] as List<dynamic>).cast<Map<String, dynamic>>().take(3).toList();
 
+    // New bookings nobody has answered yet (pending), newest first.
+    final pendingAll = state.bookingsList.where((b) => (b['status'] ?? 'pending') == 'pending').toList()
+      ..sort((a, b) => ((b['id'] as num?) ?? 0).compareTo((a['id'] as num?) ?? 0));
+    final pending = pendingAll.take(10).toList();
+    String tripTitle(Map<String, dynamic> b) {
+      final m = state.apiTrips.where((tr) => tr.id == b['trip_id']);
+      return m.isEmpty ? '' : m.first.title;
+    }
+
     return RefreshIndicator(
-      onRefresh: () async {
-          final s = context.read<AppState>();
-          await Future.wait([s.fetchDashboard(), s.fetchApiTrips()]);
-        },
+      onRefresh: _refreshAll,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
@@ -229,6 +241,50 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         ),
                     ],
                   ),
+          ),
+          const SizedBox(height: 16),
+          SectionHeader(title: t('section_new_bookings')),
+          AppCard(
+            margin: const EdgeInsets.symmetric(horizontal: 18),
+            child: state.bookingsLoading && state.bookingsData == null
+                ? const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator()))
+                : pending.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(t('no_pending_bookings'), style: const TextStyle(color: AppColors.textSecondary)),
+                      )
+                    : Column(
+                        children: [
+                          for (var i = 0; i < pending.length; i++) ...[
+                            if (i > 0) const Divider(height: 22),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(10),
+                              onTap: () => openBookingDetail(context, pending[i]),
+                              child: InfoRow(
+                                leading: InitialsAvatar(
+                                  initials: bookingName(pending[i]).isNotEmpty ? bookingName(pending[i]).substring(0, 1) : '؟',
+                                ),
+                                title: bookingName(pending[i]),
+                                subtitle: [
+                                  if (tripTitle(pending[i]).isNotEmpty) tripTitle(pending[i]),
+                                  '${pending[i]['persons_count'] ?? 1} ${t('unit_person')}',
+                                  if (pending[i]['departure_date'] != null) departureDayLabel(context, pending[i]['departure_date'] as String),
+                                  if (pending[i]['source'] == 'whatsapp') t('whatsapp_booking'),
+                                ].join(' · '),
+                                trailing: StatusPill.warning(t('status_pending')),
+                              ),
+                            ),
+                          ],
+                          if (pendingAll.length > pending.length)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: Text(
+                                t('more_pending_bookings').replaceAll('{n}', '${pendingAll.length - pending.length}'),
+                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                              ),
+                            ),
+                        ],
+                      ),
           ),
           const SizedBox(height: 16),
           SectionHeader(title: t('section_latest_notifications')),

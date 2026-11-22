@@ -777,6 +777,9 @@ class _ActionPanelState extends State<_ActionPanel> {
   }
 }
 
+/// Opens the same booking sheet as the bookings list (confirm / mark paid / cancel …).
+void openBookingDetail(BuildContext context, Map<String, dynamic> booking) => _openBookingDetail(context, booking);
+
 void _openBookingDetail(BuildContext context, Map<String, dynamic> booking) {
   showModalBottomSheet(
     context: context,
