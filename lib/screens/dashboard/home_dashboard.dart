@@ -212,7 +212,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 leading: InitialsAvatar(initials: '🌙', size: 32, imageUrl: trip.thumbnail),
                                 title: trip.title,
                                 subtitle:
-                                    '${departureDayLabel(context, d.date)} — ${d.bookings} ${t('unit_booking')} · ${d.persons} ${t('unit_person')}',
+                                    '${departureDayLabel(context, d.date)}${trip.departureTimes.isEmpty ? '' : ' ⏰ ${busTimesLabel(context, trip.departureTimes)}'} — ${d.bookings} ${t('unit_booking')} · ${d.persons} ${t('unit_person')}',
                                 trailing: _dayPill(d.date, t),
                                 onTap: () => Navigator.of(context).push(
                                   MaterialPageRoute(builder: (_) => TripBookingsScreen(trip: trip, day: d.date)),
@@ -328,6 +328,20 @@ String _tripSubtitle(Map<String, dynamic> trip, String Function(String) t) {
   }
   parts.add('${trip['booked']}/${trip['seats']} ${t('unit_seat')}');
   return parts.join(' — ');
+}
+
+/// ["14:30","20:00"] → "2:30 م، 8:00 م" (Arabic) / "2:30 PM, 8:00 PM".
+String busTimesLabel(BuildContext context, List<String> times) {
+  final ar = Localizations.localeOf(context).languageCode == 'ar' || Directionality.of(context) == TextDirection.rtl;
+  final out = <String>[];
+  for (final s in times) {
+    final m = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch(s);
+    if (m == null) continue;
+    final h = int.parse(m.group(1)!);
+    final h12 = h % 12 == 0 ? 12 : h % 12;
+    out.add('$h12:${m.group(2)} ${ar ? (h < 12 ? 'ص' : 'م') : (h < 12 ? 'AM' : 'PM')}');
+  }
+  return out.join(ar ? '، ' : ', ');
 }
 
 /// "today" / "tomorrow" / "in N days" pill for a departure day.

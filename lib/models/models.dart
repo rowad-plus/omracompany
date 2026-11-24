@@ -409,6 +409,8 @@ class ApiTrip {
   final String? flightNoGo;
   final String? flightNoReturn;
   final String? departureTime;
+  /// Bus departure time(s) "HH:MM" — one per trip once the server splits multi-time trips.
+  final List<String> departureTimes;
   final String? nextDate;
   final List<Map<String, dynamic>> buses;
   final List<Map<String, dynamic>> supervisors;
@@ -443,6 +445,7 @@ class ApiTrip {
     this.flightNoGo,
     this.flightNoReturn,
     this.departureTime,
+    this.departureTimes = const [],
     this.nextDate,
     this.buses = const [],
     this.supervisors = const [],
@@ -479,6 +482,7 @@ class ApiTrip {
         flightNoGo: j['flight_no_go'] as String?,
         flightNoReturn: j['flight_no_return'] as String?,
         departureTime: j['departure_time'] as String?,
+        departureTimes: (j['departure_times'] as List<dynamic>? ?? const []).map((e) => '$e').toList(),
         nextDate: j['next_date'] as String?,
         buses: (j['buses'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
         supervisors: (j['supervisors'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>(),
