@@ -1714,8 +1714,8 @@ class AppStrings {
       AppLanguage.id: 'Jam keberangkatan', AppLanguage.ms: 'Waktu bertolak',
     },
     'departure_times_hint': {
-      AppLanguage.ar: 'الساعة التي يتحرك فيها الباص من مدينة الانطلاق يوم السفر — يمكنك إضافة أكثر من موعد.',
-      AppLanguage.en: 'When the bus leaves the departure city on the travel day — you can add more than one time.',
+      AppLanguage.ar: 'الساعة التي يتحرك فيها الباص من مدينة الانطلاق يوم السفر. لو أضفت أكثر من موعد، كل موعد يُحفظ كرحلة مستقلة تظهر للعملاء ولك.',
+      AppLanguage.en: 'When the bus leaves the departure city on the travel day. Each extra time is saved as a separate trip.',
       AppLanguage.fr: 'Heure de départ du bus le jour du voyage — vous pouvez ajouter plusieurs horaires.',
       AppLanguage.tr: 'Yolculuk günü otobüsün kalkış saati — birden fazla saat ekleyebilirsiniz.',
       AppLanguage.ur: 'سفر کے دن بس کی روانگی کا وقت — آپ ایک سے زیادہ وقت شامل کر سکتے ہیں۔',
