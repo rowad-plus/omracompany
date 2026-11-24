@@ -71,6 +71,9 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   String status = 'active';
   String scheduleType = 'daily'; // one_time | recurring | daily
   final List<DateTime?> specificDates = [null];
+  // Bus departure time(s) from the departure city, and from Makkah for the return-only price.
+  final List<TimeOfDay?> goTimes = [null];
+  final List<TimeOfDay?> backTimes = [null];
   String recurrenceFrequency = 'weekly';
   int recurrenceDayOfWeek = 0;
   int recurrenceDayOfMonth = 1;
@@ -208,6 +211,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         'status': status,
         'schedule_type': scheduleType,
         'specific_dates': specificDates.map((d) => d?.toIso8601String()).toList(),
+        'go_times': _hhmmList(goTimes),
+        'back_times': _hhmmList(backTimes),
         'recurrence_frequency': recurrenceFrequency,
         'recurrence_day_of_week': recurrenceDayOfWeek,
         'recurrence_day_of_month': recurrenceDayOfMonth,
@@ -295,6 +300,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       destOrder = d['dest_order'] as String? ?? destOrder;
       madinahStay = d['madinah_stay'] as String? ?? madinahStay;
       busType = d['bus_type'] as String? ?? busType;
+      _setTimes(goTimes, d['go_times']);
+      _setTimes(backTimes, d['back_times']);
       durationCtrl.text = s('duration');
       makkahDaysCtrl.text = s('makkah_days');
       madinahDaysCtrl.text = s('madinah_days');
@@ -381,6 +388,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       madinahStay = data['madinah_stay'] as String? ?? 'overnight';
       final bt = data['bus_type']?.toString();
       busType = const ['6', '8', '10', '14', '32', '49'].contains(bt) ? bt : null;
+      _setTimes(goTimes, data['departure_times']);
+      _setTimes(backTimes, data['return_times']);
       durationCtrl.text = '${data['duration_days'] ?? ''}';
       makkahDaysCtrl.text = '${data['makkah_days'] ?? ''}';
       madinahDaysCtrl.text = '${data['madinah_days'] ?? ''}';
@@ -565,6 +574,9 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       if (context.read<AppState>().companyIsSaudi && _hasMadinah) 'madinah_stay': madinahStay,
       'total_seats': int.tryParse(seatsCtrl.text.trim()),
       'bus_type': busType,
+      'times_sent': 1,
+      'departure_times': _hhmmList(goTimes),
+      if (context.read<AppState>().companyIsSaudi) 'return_times': _hhmmList(backTimes),
       if (scheduleType == 'recurring') 'recurrence_frequency': recurrenceFrequency,
       if (scheduleType == 'recurring' && recurrenceFrequency == 'weekly') 'recurrence_day_of_week': recurrenceDayOfWeek,
       if (scheduleType == 'recurring' && recurrenceFrequency == 'monthly') 'recurrence_day_of_month': recurrenceDayOfMonth,
@@ -832,6 +844,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         const SizedBox(height: 4),
         if (scheduleType == 'one_time') _specificDatesSection(),
         if (scheduleType == 'recurring') _recurringScheduleSection(),
+        _timesSection(goTimes, t('departure_times_label'), t('departure_times_hint')),
         const SizedBox(height: 14),
         Text(t('destination_label'), style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
@@ -1099,6 +1112,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
             keyboardType: TextInputType.number,
             decoration: InputDecoration(labelText: t('field_price_return_only'), suffixText: 'ر.س'),
           ),
+          const SizedBox(height: 16),
+          _timesSection(backTimes, t('return_times_label'), t('return_times_hint')),
         ],
       ],
     );
@@ -1516,6 +1531,65 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       lastDate: DateTime(2045),
     );
     if (picked != null) onPicked(picked);
+  }
+
+  // ── bus times (2026-11-24) ──
+  static String _hhmm(TimeOfDay t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  static List<String> _hhmmList(List<TimeOfDay?> list) =>
+      (list.whereType<TimeOfDay>().map(_hhmm).toSet().toList()..sort());
+
+  void _setTimes(List<TimeOfDay?> target, dynamic raw) {
+    final parsed = <TimeOfDay?>[];
+    for (final v in (raw is List ? raw : const [])) {
+      final m = RegExp(r'^(\d{1,2}):(\d{2})').firstMatch('$v');
+      if (m != null) parsed.add(TimeOfDay(hour: int.parse(m.group(1)!), minute: int.parse(m.group(2)!)));
+    }
+    target
+      ..clear()
+      ..addAll(parsed.isEmpty ? [null] : parsed);
+  }
+
+  Widget _timesSection(List<TimeOfDay?> times, String label, String hint) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+          const SizedBox(height: 4),
+          Text(hint, style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (var i = 0; i < times.length; i++)
+                InputChip(
+                  avatar: const Icon(Icons.schedule, size: 18),
+                  label: Text(times[i] == null ? '--:--' : times[i]!.format(context),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                  onPressed: () async {
+                    final picked = await showTimePicker(
+                        context: context, initialTime: times[i] ?? const TimeOfDay(hour: 8, minute: 0));
+                    if (picked != null) setState(() => times[i] = picked);
+                  },
+                  onDeleted: () => setState(() {
+                    times.removeAt(i);
+                    if (times.isEmpty) times.add(null);
+                  }),
+                ),
+              ActionChip(
+                avatar: const Icon(Icons.add, size: 18),
+                label: Text(t('action_add_time')),
+                onPressed: () => setState(() => times.add(null)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _specificDatesSection() {
