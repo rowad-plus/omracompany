@@ -12,6 +12,8 @@ import '../../theme/app_theme.dart';
 class _FamilyPriceRow {
   final personsCtrl = TextEditingController(text: '2');
   final priceCtrl = TextEditingController();
+  /// Filled automatically from the company's other prices (2026-11-24); editing it makes it manual.
+  bool auto = false;
   void dispose() {
     personsCtrl.dispose();
     priceCtrl.dispose();
@@ -500,6 +502,63 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   }
 
   String t(String key) => context.watch<AppState>().t(key);
+
+  /// 2026-11-24: fill family prices up to 6 from the company's own prices — same rule as the site:
+  /// family prices decide the step (average + 10 SAR); the single-room price helps only with one family price.
+  /// Auto rows are updated in place (no focus jumps); a row the company edits becomes manual.
+  void _famAutoFill() {
+    final pts = <MapEntry<int, double>>[];
+    for (final f in familyPrices) {
+      if (f.auto) continue;
+      final n = int.tryParse(f.personsCtrl.text.trim()) ?? 0;
+      final p = double.tryParse(f.priceCtrl.text.trim()) ?? 0;
+      if (n >= 2 && p > 0) pts.add(MapEntry(n, p));
+    }
+    final single = double.tryParse(singleRoomPriceCtrl.text.trim()) ?? 0;
+    if (single > 0 && pts.length < 2) pts.add(MapEntry(1, single));
+    pts.sort((a, b) => a.key.compareTo(b.key));
+
+    final targets = <int, int>{};
+    if (pts.length >= 2) {
+      final lo = pts.first, hi = pts.last;
+      final step = (hi.value - lo.value) / (hi.key - lo.key) + 10;
+      final manual = familyPrices.where((f) => !f.auto).map((f) => int.tryParse(f.personsCtrl.text.trim())).toSet();
+      for (var n = 2; n <= 6; n++) {
+        if (manual.contains(n)) continue;
+        MapEntry<int, double>? below;
+        for (final x in pts) {
+          if (x.key < n) below = x;
+        }
+        if (below == null) continue;
+        targets[n] = (below.value + (n - below.key) * step).round();
+      }
+    }
+    // update / drop existing auto rows
+    for (final f in familyPrices.where((f) => f.auto).toList()) {
+      final n = int.tryParse(f.personsCtrl.text.trim());
+      final want = n == null ? null : targets.remove(n);
+      if (want == null) {
+        familyPrices.remove(f);
+        WidgetsBinding.instance.addPostFrameCallback((_) => f.dispose());
+      } else if (f.priceCtrl.text != '$want') {
+        f.priceCtrl.text = '$want';
+      }
+    }
+    var added = false;
+    for (final e in targets.entries) {
+      if (familyPrices.length >= 10) break;
+      added = true;
+      final row = _FamilyPriceRow()..auto = true;
+      row.personsCtrl.text = '${e.key}';
+      row.priceCtrl.text = '${e.value}';
+      familyPrices.add(row);
+    }
+    // Re-order only when rows were added, so typing never moves the row being edited.
+    if (added) {
+      familyPrices.sort((a, b) =>
+          (int.tryParse(a.personsCtrl.text.trim()) ?? 99).compareTo(int.tryParse(b.personsCtrl.text.trim()) ?? 99));
+    }
+  }
 
   int get _totalDays {
     final mk = _madinahOnly ? 0 : (int.tryParse(makkahDaysCtrl.text.trim()) ?? 0);
@@ -1046,6 +1105,7 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
           controller: singleRoomPriceCtrl,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(labelText: t('field_single_room_price')),
+          onChanged: (_) => setState(_famAutoFill),
         ),
         const SizedBox(height: 18),
         Text(t('family_pricing_label'),
@@ -1066,7 +1126,10 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
                         controller: familyPrices[i].personsCtrl,
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(labelText: t('room_occupant_count_label')),
-                        onChanged: (_) => setState(() {}),
+                        onChanged: (_) {
+                          familyPrices[i].auto = false;
+                          setState(_famAutoFill);
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1074,8 +1137,15 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
                       child: TextField(
                         controller: familyPrices[i].priceCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: t('field_price_paid')),
-                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: t('field_price_paid'),
+                          filled: familyPrices[i].auto,
+                          fillColor: const Color(0xFFFFFBEB),
+                        ),
+                        onChanged: (_) {
+                          familyPrices[i].auto = false;
+                          setState(_famAutoFill);
+                        },
                       ),
                     ),
                     IconButton(
@@ -1087,6 +1157,12 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
                     ),
                   ],
                 ),
+                if (familyPrices[i].auto)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(t('family_auto_hint'),
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFFB45309))),
+                  ),
                 _familyRowHint(familyPrices[i]),
               ],
             ),

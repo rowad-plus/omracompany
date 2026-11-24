@@ -671,6 +671,7 @@ class AppStrings {
     'status_pending': {AppLanguage.ar: 'قيد الانتظار', AppLanguage.en: 'Pending'},
     'action_confirm_booking': {AppLanguage.ar: 'تأكيد الحجز', AppLanguage.en: 'Confirm booking'},
     'action_mark_paid_confirm': {AppLanguage.ar: 'تم الدفع — تأكيد الحجز', AppLanguage.en: 'Paid — confirm booking'},
+    'family_auto_hint': {AppLanguage.ar: '⚙ محسوب تلقائياً من أسعارك — تقدر تعدّله', AppLanguage.en: '⚙ Filled automatically from your prices — you can edit it'},
     'extension_prices_label': {AppLanguage.ar: 'تمديد الإقامة — سعر اليوم (اختياري)', AppLanguage.en: 'Stay extension — price per day (optional)'},
     'extension_prices_hint': {
       AppLanguage.ar: 'العميل يمدد رحلته من «حجوزاتي» ويحدد عدد الأيام، ويصلك الطلب لتأكيده. السعر لكل شخص عن كل يوم. اتركه فارغاً لإخفاء التمديد.',
