@@ -98,6 +98,9 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   // Saudi only: one-way prices per person, SAR, no stay.
   final priceGoOnlyCtrl = TextEditingController();
   final priceReturnOnlyCtrl = TextEditingController();
+  // «تمديد الإقامة» per person per day (2026-11-24)
+  final extPersonCtrl = TextEditingController();
+  final extFamilyCtrl = TextEditingController();
   final extraRoomPriceCtrl = TextEditingController();
   // One person alone in a private room (optional).
   final singleRoomPriceCtrl = TextEditingController();
@@ -227,6 +230,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
         'price': priceCtrl.text,
         'price_go_only': priceGoOnlyCtrl.text,
         'price_return_only': priceReturnOnlyCtrl.text,
+        'ext_person': extPersonCtrl.text,
+        'ext_family': extFamilyCtrl.text,
         'extra_room_price': extraRoomPriceCtrl.text,
         'private_room_price': singleRoomPriceCtrl.text,
         'family_prices': [for (final f in familyPrices) {'persons': f.personsCtrl.text, 'price': f.priceCtrl.text}],
@@ -309,6 +314,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       priceCtrl.text = s('price');
       priceGoOnlyCtrl.text = s('price_go_only');
       priceReturnOnlyCtrl.text = s('price_return_only');
+      extPersonCtrl.text = s('ext_person');
+      extFamilyCtrl.text = s('ext_family');
       extraRoomPriceCtrl.text = s('extra_room_price');
       singleRoomPriceCtrl.text = s('private_room_price');
       for (final f in (d['family_prices'] as List<dynamic>? ?? [])) {
@@ -398,6 +405,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       priceCtrl.text = '${data['price'] ?? ''}';
       priceGoOnlyCtrl.text = data['price_go_only'] == null ? '' : '${data['price_go_only']}'.replaceAll(RegExp(r'\.0+$'), '');
       priceReturnOnlyCtrl.text = data['price_return_only'] == null ? '' : '${data['price_return_only']}'.replaceAll(RegExp(r'\.0+$'), '');
+      extPersonCtrl.text = data['extension_price_person'] == null ? '' : '${data['extension_price_person']}'.replaceAll(RegExp(r'\.0+$'), '');
+      extFamilyCtrl.text = data['extension_price_family'] == null ? '' : '${data['extension_price_family']}'.replaceAll(RegExp(r'\.0+$'), '');
       extraRoomPriceCtrl.text = data['extra_room_price'] == null ? '' : '${data['extra_room_price']}'.replaceAll(RegExp(r'\.0+$'), '');
       singleRoomPriceCtrl.text = data['private_room_price'] == null ? '' : '${data['private_room_price']}'.replaceAll(RegExp(r'\.0+$'), '');
       final prices = (data['family_prices'] as List<dynamic>? ?? []);
@@ -463,6 +472,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
     priceCtrl.dispose();
     priceGoOnlyCtrl.dispose();
     priceReturnOnlyCtrl.dispose();
+    extPersonCtrl.dispose();
+    extFamilyCtrl.dispose();
     extraRoomPriceCtrl.dispose();
     singleRoomPriceCtrl.dispose();
     hotelNameCtrl.dispose();
@@ -561,6 +572,8 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
       'price': double.tryParse(priceCtrl.text.trim()) ?? 0,
       'extra_room_price': double.tryParse(extraRoomPriceCtrl.text.trim()),
       'private_room_price': double.tryParse(singleRoomPriceCtrl.text.trim()),
+      'extension_price_person': double.tryParse(extPersonCtrl.text.trim()),
+      'extension_price_family': double.tryParse(extFamilyCtrl.text.trim()),
       if (context.read<AppState>().companyIsSaudi) ...{
         'price_go_only': double.tryParse(priceGoOnlyCtrl.text.trim()),
         'price_return_only': double.tryParse(priceReturnOnlyCtrl.text.trim()),
@@ -1094,6 +1107,44 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
           keyboardType: TextInputType.number,
           decoration: InputDecoration(labelText: t('field_extra_room_price')),
         ),
+        const SizedBox(height: 22),
+        Text(t('extension_prices_label'),
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
+        Text(t('extension_prices_hint'), style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+        const SizedBox(height: 10),
+        TextField(
+          controller: extPersonCtrl,
+          keyboardType: TextInputType.number,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(labelText: t('field_extension_person')),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: extFamilyCtrl,
+          keyboardType: TextInputType.number,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(labelText: t('field_extension_family')),
+        ),
+        Builder(builder: (_) {
+          final ep = double.tryParse(extPersonCtrl.text.trim()) ?? 0;
+          final ef = double.tryParse(extFamilyCtrl.text.trim()) ?? 0;
+          if (ep <= 0 && ef <= 0) return const SizedBox.shrink();
+          String f(double v) => v.toStringAsFixed(0);
+          final fam = ef > 0 ? ef : ep;
+          return Container(
+            margin: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+            child: Text(
+              [
+                if (ep > 0) t('extension_example_person').replaceAll('{p}', f(ep)).replaceAll('{t}', f(ep * 3)),
+                t('extension_example_family').replaceAll('{p}', f(fam)).replaceAll('{t}', f(fam * 12)),
+              ].join('\n'),
+              style: const TextStyle(fontSize: 12, height: 1.6),
+            ),
+          );
+        }),
         if (context.watch<AppState>().companyIsSaudi) ...[
           const SizedBox(height: 22),
           Text(t('one_way_prices_label'),

@@ -1056,6 +1056,55 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
                 ),
               ),
 
+              // ── Stay extension request from the pilgrim (2026-11-24) ──
+              if (!busy && _pendingExtension(b) != null) ...[
+                const SizedBox(height: 14),
+                Builder(builder: (_) {
+                  final e = _pendingExtension(b)!;
+                  String n(dynamic v) => (v is num ? v : num.tryParse('$v') ?? 0).toStringAsFixed(0);
+                  return _SheetCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          const Icon(Icons.event_repeat, size: 20, color: Color(0xFFC2410C)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(t('extension_request_title'),
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800))),
+                        ]),
+                        const SizedBox(height: 8),
+                        Text(
+                            '${e['days']} ${t('unit_days')} × ${e['persons']} ${t('unit_person')} × ${n(e['rate'])} = ${n(e['amount'])} ${e['currency'] ?? ''}',
+                            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                        if (e['is_family'] == true)
+                          Text(t('extension_family_rate'),
+                              style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+                        const SizedBox(height: 4),
+                        Text(t('extension_note'), style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                              onPressed: () => _run(() => state.decideBookingExtension(b['id'] as int, e['id'] as int, 'confirm')),
+                              child: Text(t('action_confirm_extension')),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _run(() => state.decideBookingExtension(b['id'] as int, e['id'] as int, 'reject')),
+                              child: Text(t('action_reject')),
+                            ),
+                          ),
+                        ]),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+
               // ── Extra room(s) for this booking (2026-11-08) ──
               // Only for staff who see money (owner / bookings.manage).
               if (!busy && b.containsKey('total_amount') && status != 'cancelled' && status != 'rejected') ...[
@@ -1144,6 +1193,14 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
       ),
     );
   }
+}
+
+/// The pilgrim's pending «تمديد الإقامة» request on this booking, if any.
+Map<String, dynamic>? _pendingExtension(Map<String, dynamic> b) {
+  for (final e in (b['extensions'] as List<dynamic>? ?? const [])) {
+    if (e is Map<String, dynamic> && e['status'] == 'pending') return e;
+  }
+  return null;
 }
 
 class _SheetCard extends StatelessWidget {

@@ -671,6 +671,23 @@ class AppStrings {
     'status_pending': {AppLanguage.ar: 'قيد الانتظار', AppLanguage.en: 'Pending'},
     'action_confirm_booking': {AppLanguage.ar: 'تأكيد الحجز', AppLanguage.en: 'Confirm booking'},
     'action_mark_paid_confirm': {AppLanguage.ar: 'تم الدفع — تأكيد الحجز', AppLanguage.en: 'Paid — confirm booking'},
+    'extension_prices_label': {AppLanguage.ar: 'تمديد الإقامة — سعر اليوم (اختياري)', AppLanguage.en: 'Stay extension — price per day (optional)'},
+    'extension_prices_hint': {
+      AppLanguage.ar: 'العميل يمدد رحلته من «حجوزاتي» ويحدد عدد الأيام، ويصلك الطلب لتأكيده. السعر لكل شخص عن كل يوم. اتركه فارغاً لإخفاء التمديد.',
+      AppLanguage.en: 'Pilgrims extend from “My bookings” and pick the days; you confirm the request. Price per person per day. Leave empty to hide.',
+    },
+    'field_extension_person': {AppLanguage.ar: 'سعر اليوم للفرد', AppLanguage.en: 'Price per person per day'},
+    'field_extension_family': {AppLanguage.ar: 'سعر اليوم للفرد ضمن عائلة (غرفة خاصة)', AppLanguage.en: 'Per person per day in a family (private room)'},
+    'extension_example_person': {AppLanguage.ar: 'مثال: شخص مدد 3 أيام = 1 × 3 × {p} = {t}', AppLanguage.en: 'Example: 1 person, 3 days = 1 × 3 × {p} = {t}'},
+    'extension_example_family': {AppLanguage.ar: 'مثال: عائلة 4 أشخاص مددت 3 أيام = 4 × 3 × {p} = {t}', AppLanguage.en: 'Example: family of 4, 3 days = 4 × 3 × {p} = {t}'},
+    'extension_request_title': {AppLanguage.ar: 'طلب تمديد إقامة من العميل', AppLanguage.en: 'Stay extension request'},
+    'extension_family_rate': {AppLanguage.ar: 'بسعر العائلة', AppLanguage.en: 'Family rate'},
+    'extension_note': {
+      AppLanguage.ar: 'عند التأكيد يُضاف المبلغ لإجمالي الحجز كمبلغ متبقٍ تحصّله من العميل.',
+      AppLanguage.en: 'On confirm the amount is added to the booking as a remaining amount you collect.',
+    },
+    'action_reject': {AppLanguage.ar: 'رفض', AppLanguage.en: 'Reject'},
+    'action_confirm_extension': {AppLanguage.ar: 'تأكيد التمديد', AppLanguage.en: 'Confirm extension'},
     'action_add_room': {AppLanguage.ar: 'إضافة غرفة للحجز', AppLanguage.en: 'Add a room to booking'},
     'field_rooms_count': {AppLanguage.ar: 'عدد الغرف', AppLanguage.en: 'Number of rooms'},
     'add_room_note': {

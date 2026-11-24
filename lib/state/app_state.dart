@@ -678,6 +678,19 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// «تمديد الإقامة» (2026-11-24): action = confirm | reject.
+  Future<String?> decideBookingExtension(int bookingId, int extensionId, String action) async {
+    try {
+      await _api.patch('/bookings/$bookingId/extensions/$extensionId', {'action': action});
+      await fetchBookings();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر تنفيذ الطلب';
+    }
+  }
+
   /// Adds extra room(s) to an existing booking (total + remaining go up).
   Future<String?> addBookingExtraRooms(int id, {required int rooms, required double price}) async {
     try {
