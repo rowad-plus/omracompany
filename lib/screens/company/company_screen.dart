@@ -22,7 +22,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
   final _picker = ImagePicker();
 
   Future<void> _pickLogo() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final picked = await _picker.pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 85);
     if (picked == null) return;
     setState(() => uploadingLogo = true);
     final bytes = await picked.readAsBytes();

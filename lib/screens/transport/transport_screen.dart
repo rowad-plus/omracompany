@@ -4,6 +4,8 @@ import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/shared_widgets.dart';
+import '../../widgets/media_picker_section.dart';
+import 'package:image_picker/image_picker.dart';
 
 class TransportScreen extends StatefulWidget {
   const TransportScreen({super.key});
@@ -17,6 +19,7 @@ class _TransportScreenState extends State<TransportScreen> {
   void initState() {
     super.initState();
     context.read<AppState>().fetchBusCompanies();
+    context.read<AppState>().fetchCompanyMedia();
   }
 
   @override
@@ -33,7 +36,7 @@ class _TransportScreenState extends State<TransportScreen> {
         foregroundColor: AppColors.text,
         actions: [
           PopupMenuButton<String>(
-            onSelected: (v) => v == 'company' ? _showAddCompanySheet(context) : _showAddBusSheet(context, bus: null),
+            onSelected: (v) => v == 'company' ? _showAddCompanySheet(context) : showAddBusSheet(context, bus: null),
             itemBuilder: (ctx) => [
               PopupMenuItem(value: 'bus', child: Text(t('add_bus_title'))),
               PopupMenuItem(value: 'company', child: Text(t('add_bus_company_title'))),
@@ -66,7 +69,7 @@ class _TransportScreenState extends State<TransportScreen> {
                             for (var i = 0; i < unassigned.length; i++) ...[
                               if (i > 0) const Divider(height: 21),
                               InkWell(
-                                onTap: () => _showAddBusSheet(context, bus: unassigned[i]),
+                                onTap: () => showAddBusSheet(context, bus: unassigned[i]),
                                 child: _BusRow(bus: unassigned[i], t: t),
                               ),
                             ],
@@ -105,7 +108,7 @@ class _TransportScreenState extends State<TransportScreen> {
                             for (var i = 0; i < company.buses.length; i++) ...[
                               if (i > 0) const Divider(height: 21),
                               InkWell(
-                                onTap: () => _showAddBusSheet(context, bus: company.buses[i]),
+                                onTap: () => showAddBusSheet(context, bus: company.buses[i]),
                                 child: _BusRow(bus: company.buses[i], t: t),
                               ),
                             ],
@@ -135,7 +138,11 @@ class _BusRow extends StatelessWidget {
       ),
       title: bus.busNumber,
       subtitle: '${bus.capacity ?? 0} ${t('unit_passenger')} — ${bus.driverName.isEmpty ? t('transport_no_driver') : bus.driverName}',
-      trailing: StatusPill.success(t('transport_available')),
+      trailing: switch (context.watch<AppState>().busClasses[bus.id]) {
+        'vip' => StatusPill.warning(t('bus_class_vip')),
+        'economy' => StatusPill.info(t('bus_class_economy')),
+        _ => StatusPill.success(t('transport_available')),
+      },
     );
   }
 }
@@ -243,7 +250,7 @@ class _AddCompanySheetState extends State<_AddCompanySheet> {
   }
 }
 
-void _showAddBusSheet(BuildContext context, {CompanyBus? bus}) {
+void showAddBusSheet(BuildContext context, {CompanyBus? bus}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -269,12 +276,23 @@ class _AddBusSheetState extends State<_AddBusSheet> {
   int? companyId;
   bool saving = false;
   String? error;
+  final List<XFile> pendingMedia = [];
+
+  /// 'economy' | 'vip': economy bus media shows on economy + premium trips, VIP on VIP trips.
+  String busClass = 'economy';
 
   bool get isEdit => widget.bus != null;
 
   @override
   void initState() {
     super.initState();
+    final st = context.read<AppState>();
+    if (widget.bus != null) busClass = st.busClasses[widget.bus!.id] ?? 'economy';
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await st.fetchCompanyMedia();
+      if (mounted && widget.bus != null) setState(() => busClass = st.busClasses[widget.bus!.id] ?? busClass);
+    });
     final bus = widget.bus;
     if (bus != null) {
       numberCtrl.text = bus.busNumber;
@@ -318,12 +336,26 @@ class _AddBusSheetState extends State<_AddBusSheet> {
             driverName: driverCtrl.text.trim().isEmpty ? null : driverCtrl.text.trim(),
           );
     if (!mounted) return;
-    setState(() => saving = false);
-    if (result == null) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() => error = result);
+    if (result != null) {
+      setState(() {
+        saving = false;
+        error = result;
+      });
+      return;
     }
+    final busId = isEdit ? widget.bus!.id : state.lastCreatedBusId;
+    String? extraError;
+    if (busId != null) {
+      extraError = await state.setBusClass(busId, busClass);
+      if (pendingMedia.isNotEmpty) {
+        extraError = await state.uploadCompanyMedia('bus', busId, pendingMedia) ?? extraError;
+      }
+    }
+    if (!mounted) return;
+    setState(() => saving = false);
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    if (extraError != null) messenger.showSnackBar(SnackBar(content: Text(extraError)));
   }
 
   @override
@@ -335,7 +367,8 @@ class _AddBusSheetState extends State<_AddBusSheet> {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(18),
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -366,6 +399,31 @@ class _AddBusSheetState extends State<_AddBusSheet> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: t('field_capacity')),
               ),
+              const SizedBox(height: 14),
+              Text(t('field_bus_class'), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: [
+                  ButtonSegment(value: 'economy', label: Text(t('bus_class_economy'))),
+                  ButtonSegment(value: 'vip', label: Text(t('bus_class_vip'))),
+                ],
+                selected: {busClass},
+                onSelectionChanged: (v) => setState(() => busClass = v.first),
+              ),
+              const SizedBox(height: 4),
+              Text(t('bus_class_hint'), style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+              const SizedBox(height: 18),
+              MediaPickerSection(
+                existing: isEdit ? (state.busMedia[widget.bus!.id] ?? const []) : const [],
+                pending: pendingMedia,
+                t: t,
+                onDeleteExisting: (m) async {
+                  final r = await context.read<AppState>().deleteCompanyMedia('bus', m.id);
+                  if (r != null && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r)));
+                  }
+                },
+              ),
               const SizedBox(height: 18),
               ElevatedButton(
                 onPressed: saving ? null : _save,
@@ -374,6 +432,7 @@ class _AddBusSheetState extends State<_AddBusSheet> {
                     : Text(t('action_save_generic')),
               ),
             ],
+          ),
           ),
         ),
       ),

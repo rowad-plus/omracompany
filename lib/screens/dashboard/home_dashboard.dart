@@ -7,6 +7,9 @@ import '../../widgets/shared_widgets.dart';
 import '../notifications/notifications_screen.dart';
 import 'bookings_screen.dart';
 import '../trips/trip_detail_screen.dart';
+import '../wizard/trip_wizard_screen.dart';
+import '../hotels/hotels_screen.dart';
+import '../transport/transport_screen.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -52,6 +55,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
         return AppColors.info;
     }
   }
+
+  bool _may(AppState s, String permission) =>
+      s.currentRoles.contains(UserRole.owner) || s.permissions.contains(permission);
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +197,51 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 StatChip(label: t('stat_travelers'), value: '${kpis['total_pilgrims']}'),
                 const SizedBox(width: 10),
                 StatChip(label: t('stat_pending_bookings'), value: '${kpis['pending_bookings']}'),
+              ],
+            ),
+          ),
+          // 2026-11-27: quick add — trip, then hotel, then bus (owner or matching permission).
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_may(state, 'umrah.manage'))
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TripWizardScreen()));
+                      if (context.mounted) _refreshAll();
+                    },
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: Text(t('action_add_new_trip')),
+                    style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                  ),
+                if (_may(state, 'hotels.manage')) ...[
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final s = context.read<AppState>();
+                      if (s.saudiCities.isEmpty) await s.fetchCompanyHotels();
+                      if (context.mounted) showHotelSheet(context);
+                    },
+                    icon: const Icon(Icons.hotel_outlined),
+                    label: Text(t('action_add_hotel_home')),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                  ),
+                ],
+                if (_may(state, 'transport.manage')) ...[
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final s = context.read<AppState>();
+                      if (s.busCompanies.isEmpty) await s.fetchBusCompanies();
+                      if (context.mounted) showAddBusSheet(context);
+                    },
+                    icon: const Icon(Icons.directions_bus_outlined),
+                    label: Text(t('action_add_bus_home')),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                  ),
+                ],
               ],
             ),
           ),

@@ -152,6 +152,25 @@ class SaudiCity {
 }
 
 /// فندق متعاقد معه فعليًا في شاشة "الفنادق والإقامة" (Backend حقيقي).
+/// 2026-11-27: a photo or video of a company hotel or bus (shown on matching trips).
+class CompanyMediaItem {
+  final int id;
+  final bool isVideo;
+  final String url;
+
+  /// false while the server is still shrinking a video.
+  final bool ready;
+
+  const CompanyMediaItem({required this.id, required this.isVideo, required this.url, this.ready = true});
+
+  factory CompanyMediaItem.fromJson(Map<String, dynamic> j) => CompanyMediaItem(
+        id: (j['id'] as num).toInt(),
+        isVideo: j['type'] == 'video',
+        url: j['url'] as String? ?? '',
+        ready: j['ready'] as bool? ?? true,
+      );
+}
+
 class CompanyHotel {
   final int id;
   final int cityId;

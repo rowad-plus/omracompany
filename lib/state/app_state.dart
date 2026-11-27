@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_strings.dart';
 import '../models/models.dart';
 import '../services/api_client.dart';
+import '../services/media_prep.dart';
 import '../services/live_updates.dart';
 import '../services/push_service.dart';
 
@@ -1083,7 +1085,9 @@ class AppState extends ChangeNotifier {
         'distance_haram': distanceHaram,
         'contact': contact,
       }) as Map<String, dynamic>;
-      companyHotels.add(CompanyHotel.fromJson(res['hotel'] as Map<String, dynamic>));
+      final created = CompanyHotel.fromJson(res['hotel'] as Map<String, dynamic>);
+      companyHotels.add(created);
+      lastCreatedHotelId = created.id;
       notifyListeners();
       return null;
     } on ApiException catch (e) {
@@ -1180,6 +1184,87 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // ------- صور وفيديو الفنادق والباصات + فئة الباص (2026-11-27) -------
+  int? lastCreatedHotelId;
+  int? lastCreatedBusId;
+  Map<int, List<CompanyMediaItem>> hotelMedia = {};
+  Map<int, List<CompanyMediaItem>> busMedia = {};
+  Map<int, String?> busClasses = {};
+
+  Future<void> fetchCompanyMedia() async {
+    Map<String, dynamic>? res;
+    for (final path in ['/company-media', '/company-media/buses']) {
+      try {
+        res = await _api.get(path) as Map<String, dynamic>;
+        break;
+      } catch (_) {}
+    }
+    if (res == null) return;
+    List<CompanyMediaItem> items(dynamic l) =>
+        (l as List<dynamic>? ?? []).map((e) => CompanyMediaItem.fromJson(e as Map<String, dynamic>)).toList();
+    final h = res['hotels'];
+    hotelMedia = {
+      if (h is Map) for (final e in h.entries) int.parse('${e.key}'): items(e.value),
+    };
+    final b = res['buses'];
+    busMedia = {};
+    busClasses = {};
+    if (b is Map) {
+      for (final e in b.entries) {
+        final id = int.parse('${e.key}');
+        final v = e.value as Map<String, dynamic>;
+        busMedia[id] = items(v['media']);
+        busClasses[id] = v['bus_class'] as String?;
+      }
+    }
+    notifyListeners();
+  }
+
+  /// type: 'hotel' | 'bus'. Photos/videos of any size (already shrunk by the picker / prepareVideo).
+  Future<String?> uploadCompanyMedia(String type, int id, List<XFile> files) async {
+    if (files.isEmpty) return null;
+    try {
+      final parts = <MapEntry<String, List<int>>>[];
+      for (var i = 0; i < files.length; i++) {
+        parts.add(MapEntry('media[]::${uploadName(files[i], i)}', await files[i].readAsBytes()));
+      }
+      await _api.postMultipart('/company-media/$type/$id', {}, files: parts);
+      await fetchCompanyMedia();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر رفع الصور/الفيديو';
+    }
+  }
+
+  Future<String?> deleteCompanyMedia(String type, int mediaId) async {
+    try {
+      await _api.delete('/company-media/$type/$mediaId');
+      (type == 'hotel' ? hotelMedia : busMedia).forEach((_, l) => l.removeWhere((m) => m.id == mediaId));
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر الحذف';
+    }
+  }
+
+  /// 'economy' | 'vip'
+  Future<String?> setBusClass(int busId, String? busClass) async {
+    try {
+      await _api.put('/buses/$busId/class', {'bus_class': busClass});
+      busClasses[busId] = busClass;
+      notifyListeners();
+      return null;
+    } on ApiException catch (e) {
+      return e.message;
+    } catch (_) {
+      return 'تعذّر حفظ فئة الباص';
+    }
+  }
+
   Future<String?> createBus({
     int? busCompanyId,
     required String busNumber,
@@ -1189,7 +1274,7 @@ class AppState extends ChangeNotifier {
     String? driverPhone,
   }) async {
     try {
-      await _api.post('/buses', {
+      final res = await _api.post('/buses', {
         if (busCompanyId != null) 'bus_company_id': busCompanyId,
         'bus_number': busNumber,
         'plate_number': plateNumber,
@@ -1197,6 +1282,7 @@ class AppState extends ChangeNotifier {
         'driver_name': driverName,
         'driver_phone': driverPhone,
       });
+      lastCreatedBusId = ((res is Map ? res['bus'] : null) as Map?)?['id'] as int?;
       await fetchBusCompanies();
       return null;
     } on ApiException catch (e) {

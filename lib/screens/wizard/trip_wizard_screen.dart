@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/models.dart';
+import '../../services/media_prep.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 
@@ -594,7 +595,9 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   }
 
   Future<void> _pickImages() async {
-    final picked = await _picker.pickMultiImage(imageQuality: 80);
+    // Any size: the phone shrinks each photo before upload (the server makes a
+    // small WebP from it as well).
+    final picked = await _picker.pickMultiImage(maxWidth: 1600, maxHeight: 1600, imageQuality: 75);
     if (picked.isNotEmpty) setState(() => images.addAll(picked));
   }
 
@@ -602,16 +605,19 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
   bool _isVideo(XFile f) =>
       (f.mimeType ?? '').startsWith('video/') || _videoExt.hasMatch(f.name) || _videoExt.hasMatch(f.path);
 
-  /// Trip video (MP4 / MOV, up to 50 MB), shown in the trip's gallery.
+  /// Trip video of any size, shown in the trip's gallery. It is shrunk on the
+  /// phone first (640x480 MP4) so even a long video uploads quickly; the server
+  /// then brings it down to at most 2 MB.
   Future<void> _pickVideo() async {
     final v = await _picker.pickVideo(source: ImageSource.gallery);
-    if (v == null) return;
-    if (await v.length() > 50 * 1024 * 1024) {
-      if (!mounted) return;
+    if (v == null || !mounted) return;
+    final shrunk = await prepareVideo(context, v, t('preparing_video'));
+    if (!mounted) return;
+    if (shrunk == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('err_video_too_big'))));
       return;
     }
-    setState(() => images.add(v));
+    setState(() => images.add(shrunk));
   }
 
   Future<void> _submit() async {
@@ -1525,6 +1531,10 @@ class _TripWizardScreenState extends State<TripWizardScreen> with WidgetsBinding
           ),
         ),
         const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.only(top: 2, bottom: 8),
+          child: Text(t('media_auto_shrink_hint'), style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+        ),
         OutlinedButton.icon(
           onPressed: _pickVideo,
           icon: const Icon(Icons.videocam_outlined),

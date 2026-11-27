@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/media_picker_section.dart';
+import 'package:image_picker/image_picker.dart';
 
 class HotelsScreen extends StatefulWidget {
   const HotelsScreen({super.key});
@@ -29,7 +31,7 @@ class _HotelsScreenState extends State<HotelsScreen> {
         foregroundColor: AppColors.text,
         actions: [
           IconButton(
-            onPressed: state.saudiCities.isEmpty ? null : () => _showHotelSheet(context),
+            onPressed: state.saudiCities.isEmpty ? null : () => showHotelSheet(context),
             icon: const Icon(Icons.add),
           ),
         ],
@@ -129,7 +131,7 @@ class _HotelCard extends StatelessWidget {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () => _showHotelSheet(context, hotel: hotel),
+                          onTap: () => showHotelSheet(context, hotel: hotel),
                           child: Text(t('action_edit'), style: const TextStyle(fontSize: 10.5, color: AppColors.primary)),
                         ),
                         const SizedBox(width: 12),
@@ -176,7 +178,7 @@ void _confirmDelete(BuildContext context, CompanyHotel hotel) {
   );
 }
 
-void _showHotelSheet(BuildContext context, {CompanyHotel? hotel}) {
+void showHotelSheet(BuildContext context, {CompanyHotel? hotel}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -202,12 +204,16 @@ class _AddHotelSheetState extends State<_AddHotelSheet> {
   int stars = 5;
   bool saving = false;
   String? error;
+  final List<XFile> pendingMedia = [];
 
   bool get isEdit => widget.hotel != null;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppState>().fetchCompanyMedia();
+    });
     final hotel = widget.hotel;
     if (hotel != null) {
       nameCtrl.text = hotel.name;
@@ -256,12 +262,24 @@ class _AddHotelSheetState extends State<_AddHotelSheet> {
             contact: contactCtrl.text.trim().isEmpty ? null : contactCtrl.text.trim(),
           );
     if (!mounted) return;
-    setState(() => saving = false);
-    if (result == null) {
-      Navigator.of(context).pop();
-    } else {
-      setState(() => error = result);
+    if (result != null) {
+      setState(() {
+        saving = false;
+        error = result;
+      });
+      return;
     }
+    // Photos/videos go up once the hotel exists (any size, shrunk on the phone + server).
+    final hotelId = isEdit ? widget.hotel!.id : state.lastCreatedHotelId;
+    String? uploadError;
+    if (hotelId != null && pendingMedia.isNotEmpty) {
+      uploadError = await state.uploadCompanyMedia('hotel', hotelId, pendingMedia);
+    }
+    if (!mounted) return;
+    setState(() => saving = false);
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    if (uploadError != null) messenger.showSnackBar(SnackBar(content: Text(uploadError)));
   }
 
   @override
@@ -318,6 +336,18 @@ class _AddHotelSheetState extends State<_AddHotelSheet> {
                 TextField(controller: distanceCtrl, decoration: InputDecoration(labelText: t('field_distance_from_haram'))),
                 const SizedBox(height: 14),
                 TextField(controller: contactCtrl, decoration: InputDecoration(labelText: t('field_contact_number'))),
+                const SizedBox(height: 18),
+                MediaPickerSection(
+                  existing: isEdit ? (state.hotelMedia[widget.hotel!.id] ?? const []) : const [],
+                  pending: pendingMedia,
+                  t: t,
+                  onDeleteExisting: (m) async {
+                    final r = await context.read<AppState>().deleteCompanyMedia('hotel', m.id);
+                    if (r != null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r)));
+                    }
+                  },
+                ),
                 const SizedBox(height: 18),
                 ElevatedButton(
                   onPressed: saving ? null : _save,
