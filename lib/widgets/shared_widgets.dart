@@ -146,6 +146,9 @@ class InfoRow extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
 
+  /// Extra widget under the subtitle (e.g. the room badge).
+  final Widget? below;
+
   const InfoRow({
     super.key,
     required this.leading,
@@ -153,6 +156,7 @@ class InfoRow extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.below,
   });
 
   @override
@@ -172,6 +176,7 @@ class InfoRow extends StatelessWidget {
                   child: Text(subtitle!,
                       style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
                 ),
+              if (below != null) below!,
             ],
           ),
         ),
@@ -331,24 +336,41 @@ String? roomTypeLabel(Map<String, dynamic> b, String Function(String) t) {
 /// Extra rooms on a booking (0 when none / not sent).
 int bookingExtraRooms(Map<String, dynamic> b) => (b['extra_rooms'] as num?)?.toInt() ?? 0;
 
-/// Clear room badge for hotel coordinators: private / shared, and how many rooms a private booking needs.
-Widget roomTypeBadge(Map<String, dynamic> b, String Function(String) t) {
+/// Clear, framed room badge (company + hotel coordinator): private / shared, and how many rooms a private booking needs.
+Widget roomTypeBadge(Map<String, dynamic> b, String Function(String) t, {bool large = true}) {
   final p = bookingPrivateRoom(b);
   if (p == null) return const SizedBox.shrink();
   final extra = bookingExtraRooms(b);
-  final color = p ? const Color(0xFFB45309) : AppColors.textMuted;
-  var text = t(p ? 'room_private' : 'room_shared');
-  if (extra > 0) {
-    text += ' + $extra ${t('hm_extra_rooms')} · ${t('hm_needs_rooms').replaceAll('{n}', '${extra + 1}')}';
-  }
+  final fg = p ? const Color(0xFF9A3412) : const Color(0xFF1E40AF);
+  final bg = p ? const Color(0xFFFFF7ED) : const Color(0xFFEFF6FF);
+  final border = p ? const Color(0xFFF97316) : const Color(0xFF3B82F6);
+  final label = t(p ? 'room_private' : 'room_shared').replaceFirst(RegExp(r'^\S+\s+'), '');
+  final fs = large ? 13.5 : 12.0;
   return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+    margin: const EdgeInsets.only(top: 6),
+    padding: EdgeInsets.symmetric(horizontal: large ? 10 : 8, vertical: large ? 6 : 4),
     decoration: BoxDecoration(
-      color: p ? const Color(0xFFFFF7ED) : const Color(0xFFF1F5F9),
-      borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: p ? const Color(0xFFFDBA74) : const Color(0xFFE2E8F0)),
+      color: bg,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: border, width: 1.6),
     ),
-    child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: color)),
+    child: Wrap(crossAxisAlignment: WrapCrossAlignment.center, runSpacing: 4, children: [
+      Icon(p ? Icons.lock_rounded : Icons.groups_rounded, size: large ? 18 : 15, color: fg),
+      const SizedBox(width: 6),
+      Text(label, style: TextStyle(fontSize: fs, fontWeight: FontWeight.w900, color: fg)),
+      if (extra > 0) ...[
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 7),
+          width: 1.4,
+          height: fs + 4,
+          color: border,
+        ),
+        Icon(Icons.king_bed_rounded, size: large ? 18 : 15, color: fg),
+        const SizedBox(width: 4),
+        Text('+$extra ${t('hm_extra_rooms')} · ${t('hm_needs_rooms').replaceAll('{n}', '${extra + 1}')}',
+            style: TextStyle(fontSize: fs - 0.5, fontWeight: FontWeight.w800, color: fg)),
+      ],
+    ]),
   );
 }
 

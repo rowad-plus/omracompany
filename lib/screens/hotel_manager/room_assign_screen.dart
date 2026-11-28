@@ -222,7 +222,7 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
                                                   ),
                                                   subtitle: Wrap(spacing: 6, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
                                                     Text(bookingDetails(b, t('unit_seat')), style: const TextStyle(fontSize: 11.5)),
-                                                    roomTypeBadge(b, t),
+                                                    roomTypeBadge(b, t, large: false),
                                                   ]),
                                                   onChanged: (v) => setState(
                                                       () => v == true ? selected.add(b['id'] as int) : selected.remove(b['id'])),
@@ -506,7 +506,7 @@ class _RoomCard extends StatelessWidget {
                   child: Wrap(spacing: 6, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     Text('${bookingName(o)}  ·  ${o['ref'] ?? '#${o['id']}'}',
                         style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
-                    roomTypeBadge(o, t),
+                    roomTypeBadge(o, t, large: false),
                   ]),
                 ),
                 IconButton(
