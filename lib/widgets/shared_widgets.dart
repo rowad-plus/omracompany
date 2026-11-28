@@ -328,6 +328,30 @@ String? roomTypeLabel(Map<String, dynamic> b, String Function(String) t) {
   return p == null ? null : t(p ? 'room_private' : 'room_shared');
 }
 
+/// Extra rooms on a booking (0 when none / not sent).
+int bookingExtraRooms(Map<String, dynamic> b) => (b['extra_rooms'] as num?)?.toInt() ?? 0;
+
+/// Clear room badge for hotel coordinators: private / shared, and how many rooms a private booking needs.
+Widget roomTypeBadge(Map<String, dynamic> b, String Function(String) t) {
+  final p = bookingPrivateRoom(b);
+  if (p == null) return const SizedBox.shrink();
+  final extra = bookingExtraRooms(b);
+  final color = p ? const Color(0xFFB45309) : AppColors.textMuted;
+  var text = t(p ? 'room_private' : 'room_shared');
+  if (extra > 0) {
+    text += ' + $extra ${t('hm_extra_rooms')} · ${t('hm_needs_rooms').replaceAll('{n}', '${extra + 1}')}';
+  }
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+    decoration: BoxDecoration(
+      color: p ? const Color(0xFFFFF7ED) : const Color(0xFFF1F5F9),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: p ? const Color(0xFFFDBA74) : const Color(0xFFE2E8F0)),
+    ),
+    child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: color)),
+  );
+}
+
 /// "BK-00123 · 2 مقعد · 0501234567" — tells same-named pilgrims apart.
 String bookingDetails(Map<String, dynamic> b, String seatUnit) {
   final ref = b['ref'] as String? ?? '#${b['id']}';

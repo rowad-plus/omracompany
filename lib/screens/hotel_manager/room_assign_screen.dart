@@ -66,6 +66,11 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
 
   Future<void> _houseSelected(List<Map<String, dynamic>> selectedBookings) async {
     if (selectedBookings.isEmpty) return;
+    if (selectedBookings.length > 1 && selectedBookings.any((b) => bookingPrivateRoom(b) == true)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.read<AppState>().t('hm_private_alone')), backgroundColor: AppColors.danger));
+      return;
+    }
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -215,8 +220,10 @@ class _RoomAssignScreenState extends State<RoomAssignScreen> {
                                                     bookingName(b),
                                                     style: const TextStyle(fontSize: 13),
                                                   ),
-                                                  subtitle: Text(bookingDetails(b, t('unit_seat')),
-                                                      style: const TextStyle(fontSize: 11.5)),
+                                                  subtitle: Wrap(spacing: 6, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                                                    Text(bookingDetails(b, t('unit_seat')), style: const TextStyle(fontSize: 11.5)),
+                                                    roomTypeBadge(b, t),
+                                                  ]),
                                                   onChanged: (v) => setState(
                                                       () => v == true ? selected.add(b['id'] as int) : selected.remove(b['id'])),
                                                 ),
@@ -496,8 +503,11 @@ class _RoomCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text('${bookingName(o)}  ·  ${o['ref'] ?? '#${o['id']}'}',
-                      style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                  child: Wrap(spacing: 6, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    Text('${bookingName(o)}  ·  ${o['ref'] ?? '#${o['id']}'}',
+                        style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                    roomTypeBadge(o, t),
+                  ]),
                 ),
                 IconButton(
                   visualDensity: VisualDensity.compact,

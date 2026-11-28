@@ -291,6 +291,13 @@ class _BusHousingScreenState extends State<BusHousingScreen> {
   Future<void> _houseInRoom(List<Map<String, dynamic>> chosen, List<Map<String, dynamic>> hotelPeople) async {
     final s = context.read<AppState>();
     final t = s.t;
+    // A private-room booking is housed alone (it may need several rooms).
+    final privates = chosen.where((b) => bookingPrivateRoom(b) == true).toList();
+    if (privates.isNotEmpty && chosen.length > 1) {
+      _toast(t('hm_private_alone'), error: true);
+      return;
+    }
+    final roomsNeeded = privates.isEmpty ? 1 : bookingExtraRooms(privates.first) + 1;
     final ctrl = TextEditingController();
     final room = await showDialog<String>(
       context: context,
@@ -299,7 +306,11 @@ class _BusHousingScreenState extends State<BusHousingScreen> {
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: InputDecoration(labelText: t('field_room_number')),
+          decoration: InputDecoration(
+            labelText: t('field_room_number'),
+            helperText: roomsNeeded > 1 ? t('hm_rooms_numbers_hint').replaceAll('{n}', '$roomsNeeded') : null,
+            helperMaxLines: 2,
+          ),
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
@@ -310,7 +321,12 @@ class _BusHousingScreenState extends State<BusHousingScreen> {
     );
     if (room == null || room.isEmpty || !mounted) return;
     // Who is already in that room (any company, same hotel name).
-    final already = _people(hotelPeople.where((b) => '${b['room_number'] ?? ''}' == room && !chosen.contains(b)));
+    final others = hotelPeople.where((b) => '${b['room_number'] ?? ''}' == room && !chosen.contains(b)).toList();
+    if (others.isNotEmpty && (privates.isNotEmpty || others.any((b) => bookingPrivateRoom(b) == true))) {
+      _toast(t('hm_private_alone'), error: true);
+      return;
+    }
+    final already = _people(others);
     if (already + _people(chosen) > kMaxRoomPeople) {
       _toast('${t('hm_room_full')} ($already + ${_people(chosen)} > $kMaxRoomPeople)', error: true);
       return;
@@ -359,12 +375,7 @@ class _BusHousingScreenState extends State<BusHousingScreen> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             CompanyTag('${b['company_name'] ?? ''}'),
-            if (bookingPrivateRoom(b) != null)
-              Text(context.read<AppState>().t(bookingPrivateRoom(b)! ? 'room_private' : 'room_shared'),
-                  style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: bookingPrivateRoom(b)! ? const Color(0xFFB45309) : AppColors.textMuted)),
+            roomTypeBadge(b, context.read<AppState>().t),
             Text('${b['ref']}', style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
           ],
         ),
