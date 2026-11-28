@@ -319,6 +319,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                                 subtitle: [
                                   if (tripTitle(pending[i]).isNotEmpty) tripTitle(pending[i]),
                                   '${pending[i]['persons_count'] ?? 1} ${t('unit_person')}',
+                                  if (roomTypeLabel(pending[i], t) != null) roomTypeLabel(pending[i], t)!,
                                   if (pending[i]['departure_date'] != null) departureDayLabel(context, pending[i]['departure_date'] as String),
                                   if (pending[i]['source'] == 'whatsapp') t('whatsapp_booking'),
                                 ].join(' · '),

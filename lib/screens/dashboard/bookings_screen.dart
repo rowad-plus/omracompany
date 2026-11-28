@@ -279,6 +279,7 @@ class _BookingRow extends StatelessWidget {
         title: name,
         subtitle: [
           '${booking['persons_count']} ${t('unit_seat')}',
+          if (roomTypeLabel(booking, t) != null) roomTypeLabel(booking, t)!,
           if (((booking['extra_rooms'] as num?)?.toInt() ?? 0) > 0) '+${booking['extra_rooms']} ${t('unit_extra_room')}',
           if (booking['source'] == 'whatsapp') t('whatsapp_booking'),
           if (booking['total_price'] != null) '${booking['total_price']} ${booking['tripCurrency'] ?? ''}',
@@ -882,6 +883,7 @@ class _BookingDetailSheetState extends State<_BookingDetailSheet> {
     // RLM around each part keeps the Arabic/Latin pieces in reading order.
     final meta = [
       '${b['persons_count'] ?? 1} ${t('unit_person')}',
+      if (roomTypeLabel(b, t) != null) roomTypeLabel(b, t)!,
       if (((b['extra_rooms'] as num?)?.toInt() ?? 0) > 0) '+${b['extra_rooms']} ${t('unit_extra_room')}',
       if (b['source'] == 'whatsapp') t('whatsapp_booking'),
       if (b['total_price'] != null) '${b['total_price']} ${b['tripCurrency'] ?? ''}',

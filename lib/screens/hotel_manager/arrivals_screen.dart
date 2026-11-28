@@ -359,6 +359,12 @@ class _BusHousingScreenState extends State<BusHousingScreen> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             CompanyTag('${b['company_name'] ?? ''}'),
+            if (bookingPrivateRoom(b) != null)
+              Text(context.read<AppState>().t(bookingPrivateRoom(b)! ? 'room_private' : 'room_shared'),
+                  style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: bookingPrivateRoom(b)! ? const Color(0xFFB45309) : AppColors.textMuted)),
             Text('${b['ref']}', style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
           ],
         ),

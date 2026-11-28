@@ -697,6 +697,8 @@ class AppStrings {
     },
     'add_room_invalid': {AppLanguage.ar: 'أدخل عدد الغرف وسعر الغرفة', AppLanguage.en: 'Enter the number of rooms and the room price'},
     'whatsapp_booking': {AppLanguage.ar: '🟢 حجز واتساب', AppLanguage.en: '🟢 WhatsApp booking'},
+    'room_private': {AppLanguage.ar: '🔒 غرفة خاصة', AppLanguage.en: '🔒 Private room'},
+    'room_shared': {AppLanguage.ar: '👥 غرفة مشتركة', AppLanguage.en: '👥 Shared room'},
     'unit_extra_room': {AppLanguage.ar: 'غرفة إضافية', AppLanguage.en: 'extra room'},
     'remaining_word': {AppLanguage.ar: 'متبقي', AppLanguage.en: 'remaining'},
     'action_mark_remaining_paid': {AppLanguage.ar: 'تم دفع المتبقي', AppLanguage.en: 'Remaining paid'},

@@ -315,6 +315,19 @@ String bookingName(Map<String, dynamic> b) =>
         ? (b['user'] as Map<String, dynamic>)['name'] as String
         : '—';
 
+/// Private vs shared room of a booking; null when the API didn't send it (older server).
+bool? bookingPrivateRoom(Map<String, dynamic> b) {
+  if (!b.containsKey('private_room')) return null;
+  final v = b['private_room'];
+  return v == true || v == 1 || v == '1';
+}
+
+/// "🔒 غرفة خاصة" / "👥 غرفة مشتركة", or null when unknown.
+String? roomTypeLabel(Map<String, dynamic> b, String Function(String) t) {
+  final p = bookingPrivateRoom(b);
+  return p == null ? null : t(p ? 'room_private' : 'room_shared');
+}
+
 /// "BK-00123 · 2 مقعد · 0501234567" — tells same-named pilgrims apart.
 String bookingDetails(Map<String, dynamic> b, String seatUnit) {
   final ref = b['ref'] as String? ?? '#${b['id']}';
